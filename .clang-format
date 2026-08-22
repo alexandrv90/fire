@@ -1,0 +1,9 @@
+---
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+ColumnLimit: 120
+IndentWidth: 4
+PointerAlignment: Left
+AlwaysBreakTemplateDeclarations: true
+BinPackArguments: false
+BinPackParameters: OnePerLine
