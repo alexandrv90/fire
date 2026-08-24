@@ -3,7 +3,6 @@
 #include <QPaintEvent>
 #include <QPainter>
 
-#include <algorithm>
 #include <array>
 #include <cassert>
 
@@ -33,7 +32,6 @@ FireWidget::FireWidget(const int simulationWidth, const int simulationHeight, QW
     setAutoFillBackground(false);
     setFocusPolicy(Qt::StrongFocus);
     frame.fill(Qt::black);
-    frameRateTimer.start();
 }
 
 void FireWidget::present(const std::span<const std::uint8_t> heat) noexcept {
@@ -54,17 +52,6 @@ void FireWidget::present(const std::span<const std::uint8_t> heat) noexcept {
     update();
 }
 
-void FireWidget::setPaused(const bool paused) {
-    if (isPaused == paused) {
-        return;
-    }
-    isPaused = paused;
-    presentedFrames = 0;
-    frameRateTimer.restart();
-    frameRateText = isPaused ? QStringLiteral("FPS: paused") : QStringLiteral("FPS: --");
-    update();
-}
-
 QSize FireWidget::minimumSizeHint() const { return {400, 300}; }
 
 QSize FireWidget::sizeHint() const { return {800, 600}; }
@@ -76,16 +63,6 @@ void FireWidget::paintEvent(QPaintEvent* const event) {
     painter.fillRect(rect(), Qt::black);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, /* false */ true);
     painter.drawImage(fittedFrameRect(), frame);
-
-    if (!isPaused) {
-        ++presentedFrames;
-        updateFrameRateText();
-    }
-
-    const QRect overlayRect{12, 12, 124, 34};
-    painter.fillRect(overlayRect, QColor{0, 0, 0, 168});
-    painter.setPen(QColor{255, 244, 190});
-    painter.drawText(overlayRect.adjusted(10, 0, -6, 0), Qt::AlignLeft | Qt::AlignVCenter, frameRateText);
 }
 
 std::array<QRgb, 256> FireWidget::makePalette() noexcept {
@@ -128,17 +105,4 @@ QRect FireWidget::fittedFrameRect() const noexcept {
 
     return {
         (availableWidth - renderedWidth) / 2, (availableHeight - renderedHeight) / 2, renderedWidth, renderedHeight};
-}
-
-void FireWidget::updateFrameRateText() {
-    const qint64 elapsedMilliseconds = frameRateTimer.elapsed();
-    if (elapsedMilliseconds < 500) {
-        return;
-    }
-
-    const double framesPerSecond =
-        static_cast<double>(presentedFrames) * 1000.0 / static_cast<double>(elapsedMilliseconds);
-    frameRateText = QStringLiteral("FPS: %1").arg(framesPerSecond, 0, 'f', 1);
-    presentedFrames = 0;
-    frameRateTimer.restart();
 }

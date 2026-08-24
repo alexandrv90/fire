@@ -47,7 +47,4 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
 
 void MainWindow::presentFrame() { fireWidget->present(fireController->heat()); }
 
-void MainWindow::updateRunningState(const bool running) {
-    controlPanel->setPaused(!running);
-    fireWidget->setPaused(!running);
-}
+void MainWindow::updateRunningState(const bool running) { controlPanel->setPaused(!running); }
