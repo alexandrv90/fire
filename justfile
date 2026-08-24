@@ -20,5 +20,8 @@ build-profile: configure-profile
 
 build-all: build-debug build-release build-profile
 
+check-format:
+    clang-format --dry-run --Werror `rg --files src -g '*.{c,cc,cpp,cxx,h,hh,hpp,hxx}'`
+
 run-release: build-release
     cmake --build --preset build-release --target run_app
