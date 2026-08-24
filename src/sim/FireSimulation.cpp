@@ -6,7 +6,13 @@
 
 namespace {
 constexpr std::uint32_t FALLBACK_SEED = 0xA341316Cu;
-}
+constexpr std::uint32_t SIDE_WEIGHT = 1;
+constexpr std::uint32_t NEAR_CENTER_WEIGHT = 10;
+constexpr std::uint32_t FAR_CENTER_WEIGHT = 4;
+constexpr std::uint32_t WEIGHT_DIVISOR = 16;
+
+static_assert(2 * SIDE_WEIGHT + NEAR_CENTER_WEIGHT + FAR_CENTER_WEIGHT == WEIGHT_DIVISOR);
+} // namespace
 
 FireSimulation::FireSimulation(const std::size_t width, const std::size_t height, const std::uint32_t randomSeed)
     : simulationWidth(width), simulationHeight(height), initialSeed(randomSeed == 0 ? FALLBACK_SEED : randomSeed),
@@ -25,28 +31,26 @@ FireSimulation::FireSimulation(const std::size_t width, const std::size_t height
 
 void FireSimulation::tick() noexcept {
     auto* const cells = heatMap.data();
+    const std::uint8_t cooling = simulationParameters.cooling();
 
-    // Propagate from each lower row into the row above it. Updating top-to-bottom
-    // is intentional: every source row still contains the previous frame's heat.
+    // Propagate from lower rows into the row above. Updating top-to-bottom is
+    // intentional: every source row still contains the previous frame's heat.
     for (std::size_t y = 0; y + 1 < simulationHeight; ++y) {
         const std::size_t destinationOffset = y * simulationWidth;
-        const std::size_t sourceOffset = destinationOffset + simulationWidth;
+        const std::size_t nearSourceOffset = destinationOffset + simulationWidth;
+        const std::size_t farSourceY = std::min(y + 2, simulationHeight - 1);
+        const std::size_t farSourceOffset = farSourceY * simulationWidth;
 
         for (std::size_t x = 0; x < simulationWidth; ++x) {
-            const std::uint32_t random = nextRandom();
-            const std::ptrdiff_t drift = static_cast<std::ptrdiff_t>((random >> 8u) % 3u) - 1;
+            const std::size_t leftX = x == 0 ? x : x - 1;
+            const std::size_t rightX = x + 1 == simulationWidth ? x : x + 1;
+            const std::uint32_t weightedHeat =
+                SIDE_WEIGHT * cells[nearSourceOffset + leftX] + NEAR_CENTER_WEIGHT * cells[nearSourceOffset + x] +
+                SIDE_WEIGHT * cells[nearSourceOffset + rightX] + FAR_CENTER_WEIGHT * cells[farSourceOffset + x];
+            const auto averagedHeat = static_cast<std::uint8_t>(weightedHeat / WEIGHT_DIVISOR);
 
-            const auto sourceX = static_cast<std::ptrdiff_t>(x) - drift;
-            // Treat space beyond the simulation as cold. Clamping here would copy
-            // edge heat back into the area that lateral drift has just vacated.
-            std::uint8_t source = 0;
-            if (sourceX >= 0 && sourceX < static_cast<std::ptrdiff_t>(simulationWidth)) {
-                source = cells[sourceOffset + static_cast<std::size_t>(sourceX)];
-            }
-            const auto decay = static_cast<std::uint8_t>(
-                (random >> 24u) % (static_cast<std::uint32_t>(simulationParameters.cooling()) + 1u));
-
-            cells[destinationOffset + x] = source > decay ? static_cast<std::uint8_t>(source - decay) : std::uint8_t{0};
+            cells[destinationOffset + x] =
+                averagedHeat > cooling ? static_cast<std::uint8_t>(averagedHeat - cooling) : std::uint8_t{0};
         }
     }
 
@@ -69,9 +73,9 @@ std::uint32_t FireSimulation::nextRandom() noexcept {
 
 void FireSimulation::updateFuelRow() noexcept {
     const std::size_t rowOffset = (simulationHeight - 1) * simulationWidth;
+    const std::uint8_t sourceHeat = simulationParameters.sourceHeat();
     for (std::size_t x = 0; x < simulationWidth; ++x) {
         const auto flicker = static_cast<std::uint8_t>(nextRandom() & 0x3Fu);
-        const std::uint8_t sourceHeat = simulationParameters.sourceHeat();
         const auto scaledFlicker = static_cast<std::uint16_t>(flicker) * sourceHeat / 255u;
         heatMap[rowOffset + x] = static_cast<std::uint8_t>(sourceHeat - scaledFlicker);
     }
