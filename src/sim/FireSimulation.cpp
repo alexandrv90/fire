@@ -34,17 +34,11 @@ void FireSimulation::tick() noexcept {
 
         for (std::size_t x = 0; x < simulationWidth; ++x) {
             const std::uint32_t random = nextRandom();
-            std::ptrdiff_t drift = static_cast<std::ptrdiff_t>((random >> 8u) % 3u) - 1;
-
-            const int wind = simulationParameters.wind();
-            const auto absoluteWindStrength = static_cast<std::uint32_t>(wind < 0 ? -wind : wind);
-            if ((random & 0xFFu) < absoluteWindStrength * 24u) {
-                drift += wind < 0 ? -1 : 1;
-            }
+            const std::ptrdiff_t drift = static_cast<std::ptrdiff_t>((random >> 8u) % 3u) - 1;
 
             const auto sourceX = static_cast<std::ptrdiff_t>(x) - drift;
             // Treat space beyond the simulation as cold. Clamping here would copy
-            // edge heat back into the area that wind has just vacated.
+            // edge heat back into the area that lateral drift has just vacated.
             std::uint8_t source = 0;
             if (sourceX >= 0 && sourceX < static_cast<std::ptrdiff_t>(simulationWidth)) {
                 source = cells[sourceOffset + static_cast<std::size_t>(sourceX)];

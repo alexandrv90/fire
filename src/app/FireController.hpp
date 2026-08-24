@@ -26,7 +26,6 @@ public slots:
     void reset();
     void setSourceHeat(int sourceHeat);
     void setCooling(int cooling);
-    void setWind(int wind);
 
 signals:
     void frameReady();

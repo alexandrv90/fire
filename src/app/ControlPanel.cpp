@@ -63,19 +63,11 @@ ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const pare
                                           FireParameters::MINIMUM_COOLING,
                                           FireParameters::MAXIMUM_COOLING,
                                           parameters.cooling());
-    controlsLayout->addSpacing(8);
-    auto* const windSlider = addSlider(*controlsLayout,
-                                       this,
-                                       QStringLiteral("Wind"),
-                                       FireParameters::MINIMUM_WIND,
-                                       FireParameters::MAXIMUM_WIND,
-                                       parameters.wind());
 
     connect(pauseButton, &QPushButton::clicked, this, &ControlPanel::toggleRequested);
     connect(resetButton, &QPushButton::clicked, this, &ControlPanel::resetRequested);
     connect(sourceHeatSlider, &QSlider::valueChanged, this, &ControlPanel::sourceHeatChanged);
     connect(coolingSlider, &QSlider::valueChanged, this, &ControlPanel::coolingChanged);
-    connect(windSlider, &QSlider::valueChanged, this, &ControlPanel::windChanged);
 }
 
 void ControlPanel::setPaused(const bool paused) {

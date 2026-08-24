@@ -48,8 +48,6 @@ void FireController::setCooling(const int cooling) {
     simulation.parameters().setCooling(static_cast<std::uint8_t>(cooling));
 }
 
-void FireController::setWind(const int wind) { simulation.parameters().setWind(wind); }
-
 void FireController::advanceFrame() {
     simulation.tick();
     emit frameReady();

@@ -11,19 +11,14 @@ public:
     static constexpr std::uint8_t MAXIMUM_SOURCE_HEAT = 255;
     static constexpr std::uint8_t MINIMUM_COOLING = 1;
     static constexpr std::uint8_t MAXIMUM_COOLING = 8;
-    static constexpr int MINIMUM_WIND = -8;
-    static constexpr int MAXIMUM_WIND = 8;
 
     void setSourceHeat(std::uint8_t sourceHeat) noexcept;
     void setCooling(std::uint8_t cooling) noexcept;
-    void setWind(int wind) noexcept;
 
     [[nodiscard]] std::uint8_t sourceHeat() const noexcept { return sourceHeatLevel; }
     [[nodiscard]] std::uint8_t cooling() const noexcept { return coolingRate; }
-    [[nodiscard]] int wind() const noexcept { return windStrength; }
 
 private:
     std::uint8_t sourceHeatLevel{MAXIMUM_SOURCE_HEAT};
     std::uint8_t coolingRate{2};
-    int windStrength{0};
 };

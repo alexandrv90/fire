@@ -29,7 +29,6 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
     connect(controlPanel, &ControlPanel::sourceHeatChanged, fireController, &FireController::setSourceHeat);
     connect(controlPanel, &ControlPanel::coolingChanged, fireController, &FireController::setCooling);
-    connect(controlPanel, &ControlPanel::windChanged, fireController, &FireController::setWind);
     connect(fireController, &FireController::frameReady, this, &MainWindow::presentFrame);
     connect(fireController, &FireController::runningChanged, this, &MainWindow::updateRunningState);
 

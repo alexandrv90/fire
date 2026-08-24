@@ -18,7 +18,6 @@ signals:
     void resetRequested();
     void sourceHeatChanged(int sourceHeat);
     void coolingChanged(int cooling);
-    void windChanged(int wind);
 
 private:
     QPushButton* pauseButton{nullptr};
