@@ -4,9 +4,9 @@ FireController::FireController(const std::size_t simulationWidth,
                                const std::size_t simulationHeight,
                                QObject* const parent)
     : QObject(parent), simulation(simulationWidth, simulationHeight) {
-    frameClock.setTimerType(Qt::PreciseTimer);
-    frameClock.setInterval(FRAME_INTERVAL_MILLISECONDS);
-    connect(&frameClock, &QTimer::timeout, this, &FireController::advanceFrame);
+    wakeTimer.setTimerType(Qt::PreciseTimer);
+    wakeTimer.setInterval(WAKE_INTERVAL_MILLISECONDS);
+    connect(&wakeTimer, &QTimer::timeout, this, &FireController::advanceFrame);
 }
 
 void FireController::run() {
@@ -14,7 +14,8 @@ void FireController::run() {
         return;
     }
 
-    frameClock.start();
+    elapsedTimeReference = Clock::now();
+    wakeTimer.start();
     emit runningChanged(true);
 }
 
@@ -23,7 +24,7 @@ void FireController::pause() {
         return;
     }
 
-    frameClock.stop();
+    wakeTimer.stop();
     emit runningChanged(false);
 }
 
@@ -49,6 +50,23 @@ void FireController::setCooling(const int cooling) {
 }
 
 void FireController::advanceFrame() {
-    simulation.tick();
-    emit frameReady();
+    const auto now = Clock::now();
+    accumulatedTime += now - elapsedTimeReference;
+    elapsedTimeReference = now;
+
+    const auto maximumCatchUpTime = SIMULATION_STEP * MAX_TICKS_PER_WAKE;
+    if (accumulatedTime > maximumCatchUpTime) {
+        accumulatedTime = maximumCatchUpTime;
+    }
+
+    int ticksExecuted = 0;
+    while (accumulatedTime >= SIMULATION_STEP && ticksExecuted < MAX_TICKS_PER_WAKE) {
+        simulation.tick();
+        accumulatedTime -= SIMULATION_STEP;
+        ++ticksExecuted;
+    }
+
+    if (ticksExecuted > 0) {
+        emit frameReady();
+    }
 }

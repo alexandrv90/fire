@@ -61,7 +61,7 @@ void FireWidget::paintEvent(QPaintEvent* const event) {
 
     QPainter painter(this);
     painter.fillRect(rect(), Qt::black);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform, /* false */ true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
     painter.drawImage(fittedFrameRect(), frame);
 }
 
