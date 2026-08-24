@@ -1,14 +1,17 @@
+#include "MainWindow.hpp"
 
-#include <iostream>
-#include <span>
+#include <QApplication>
+#include <QtGlobal>
 
 int main(int argc, char* argv[]) {
-    const std::span args(argv, static_cast<std::size_t>(argc));
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
+    QApplication application(argc, argv);
+    QApplication::setApplicationDisplayName(QStringLiteral("Classic Fire"));
+    QApplication::setOrganizationName(QStringLiteral("Fire Demo"));
 
-    std::cout << "Argument count: " << args.size() << std::endl;
-    for (std::size_t i = 0; i < args.size(); ++i) {
-        std::cout << "  [" << i << "]\t" << args[i] << std::endl;
-    }
-
-    return 0;
+    MainWindow window;
+    window.show();
+    return application.exec();
 }
