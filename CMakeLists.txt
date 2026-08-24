@@ -10,6 +10,8 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 add_library(fire_simulation
+    src/sim/FireParameters.cpp
+    src/sim/FireParameters.hpp
     src/sim/FireSimulation.cpp
     src/sim/FireSimulation.hpp
 )
@@ -18,6 +20,8 @@ target_include_directories(fire_simulation PUBLIC src)
 target_compile_features(fire_simulation PUBLIC cxx_std_20)
 
 add_executable(classic_fire
+    src/app/ControlPanel.cpp
+    src/app/ControlPanel.hpp
     src/app/FireWidget.cpp
     src/app/FireWidget.hpp
     src/app/MainWindow.cpp
@@ -33,6 +37,7 @@ target_link_libraries(classic_fire PRIVATE
 )
 
 set_target_properties(classic_fire PROPERTIES
+    AUTOMOC TRUE
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_BUNDLE_NAME "Classic Fire"
     MACOSX_BUNDLE_GUI_IDENTIFIER "com.example.classicfire"

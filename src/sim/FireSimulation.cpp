@@ -36,10 +36,10 @@ void FireSimulation::tick() noexcept {
             const std::uint32_t random = nextRandom();
             std::ptrdiff_t drift = static_cast<std::ptrdiff_t>((random >> 8u) % 3u) - 1;
 
-            const auto absoluteWindStrength =
-                static_cast<std::uint32_t>(windStrength < 0 ? -windStrength : windStrength);
+            const int wind = simulationParameters.wind();
+            const auto absoluteWindStrength = static_cast<std::uint32_t>(wind < 0 ? -wind : wind);
             if ((random & 0xFFu) < absoluteWindStrength * 24u) {
-                drift += windStrength < 0 ? -1 : 1;
+                drift += wind < 0 ? -1 : 1;
             }
 
             const auto sourceX = static_cast<std::ptrdiff_t>(x) - drift;
@@ -49,8 +49,8 @@ void FireSimulation::tick() noexcept {
             if (sourceX >= 0 && sourceX < static_cast<std::ptrdiff_t>(simulationWidth)) {
                 source = cells[sourceOffset + static_cast<std::size_t>(sourceX)];
             }
-            const auto decay =
-                static_cast<std::uint8_t>((random >> 24u) % (static_cast<std::uint32_t>(coolingRate) + 1u));
+            const auto decay = static_cast<std::uint8_t>(
+                (random >> 24u) % (static_cast<std::uint32_t>(simulationParameters.cooling()) + 1u));
 
             cells[destinationOffset + x] = source > decay ? static_cast<std::uint8_t>(source - decay) : std::uint8_t{0};
         }
@@ -65,12 +65,6 @@ void FireSimulation::reset() noexcept {
     updateFuelRow();
 }
 
-void FireSimulation::setCooling(const std::uint8_t cooling) noexcept {
-    coolingRate = std::min(cooling, MAXIMUM_COOLING);
-}
-
-void FireSimulation::setWind(const int wind) noexcept { windStrength = std::clamp(wind, MINIMUM_WIND, MAXIMUM_WIND); }
-
 std::uint32_t FireSimulation::nextRandom() noexcept {
     // Xorshift32 is compact, deterministic and adequate for visual noise.
     randomState ^= randomState << 13u;
@@ -83,7 +77,8 @@ void FireSimulation::updateFuelRow() noexcept {
     const std::size_t rowOffset = (simulationHeight - 1) * simulationWidth;
     for (std::size_t x = 0; x < simulationWidth; ++x) {
         const auto flicker = static_cast<std::uint8_t>(nextRandom() & 0x3Fu);
-        const auto scaledFlicker = static_cast<std::uint16_t>(flicker) * sourceHeatLevel / 255u;
-        heatMap[rowOffset + x] = static_cast<std::uint8_t>(sourceHeatLevel - scaledFlicker);
+        const std::uint8_t sourceHeat = simulationParameters.sourceHeat();
+        const auto scaledFlicker = static_cast<std::uint16_t>(flicker) * sourceHeat / 255u;
+        heatMap[rowOffset + x] = static_cast<std::uint8_t>(sourceHeat - scaledFlicker);
     }
 }
