@@ -14,7 +14,7 @@ public:
     void setPaused(bool paused);
 
 signals:
-    void pauseRequested();
+    void toggleRequested();
     void resetRequested();
     void sourceHeatChanged(int sourceHeat);
     void coolingChanged(int cooling);

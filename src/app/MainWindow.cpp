@@ -1,6 +1,7 @@
 #include "app/MainWindow.hpp"
 
 #include "app/ControlPanel.hpp"
+#include "app/FireController.hpp"
 #include "app/FireWidget.hpp"
 
 #include <QKeySequence>
@@ -16,62 +17,37 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     windowLayout->setContentsMargins(0, 0, 0, 0);
     windowLayout->setSpacing(0);
 
+    fireController = new FireController(SIMULATION_WIDTH, SIMULATION_HEIGHT, this);
     fireWidget = new FireWidget(SIMULATION_WIDTH, SIMULATION_HEIGHT, centralWidget);
     windowLayout->addWidget(fireWidget, 1);
 
-    controlPanel = new ControlPanel(simulation.parameters(), centralWidget);
+    controlPanel = new ControlPanel(fireController->parameters(), centralWidget);
     windowLayout->addWidget(controlPanel);
     setCentralWidget(centralWidget);
 
-    connect(controlPanel, &ControlPanel::pauseRequested, this, &MainWindow::togglePaused);
-    connect(controlPanel, &ControlPanel::resetRequested, this, &MainWindow::resetSimulation);
-    connect(controlPanel, &ControlPanel::sourceHeatChanged, this, &MainWindow::setSourceHeat);
-    connect(controlPanel, &ControlPanel::coolingChanged, this, &MainWindow::setCooling);
-    connect(controlPanel, &ControlPanel::windChanged, this, &MainWindow::setWind);
+    connect(controlPanel, &ControlPanel::toggleRequested, fireController, &FireController::toggleRunning);
+    connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
+    connect(controlPanel, &ControlPanel::sourceHeatChanged, fireController, &FireController::setSourceHeat);
+    connect(controlPanel, &ControlPanel::coolingChanged, fireController, &FireController::setCooling);
+    connect(controlPanel, &ControlPanel::windChanged, fireController, &FireController::setWind);
+    connect(fireController, &FireController::frameReady, this, &MainWindow::presentFrame);
+    connect(fireController, &FireController::runningChanged, this, &MainWindow::updateRunningState);
 
     auto* const pauseShortcut = new QShortcut(QKeySequence{Qt::Key_Space}, this);
     auto* const resetShortcut = new QShortcut(QKeySequence{Qt::Key_R}, this);
     auto* const quitShortcut = new QShortcut(QKeySequence{Qt::Key_Escape}, this);
-    connect(pauseShortcut, &QShortcut::activated, this, &MainWindow::togglePaused);
-    connect(resetShortcut, &QShortcut::activated, this, &MainWindow::resetSimulation);
+    connect(pauseShortcut, &QShortcut::activated, fireController, &FireController::toggleRunning);
+    connect(resetShortcut, &QShortcut::activated, fireController, &FireController::reset);
     connect(quitShortcut, &QShortcut::activated, this, &QWidget::close);
 
-    frameTimer.setTimerType(Qt::PreciseTimer);
-    frameTimer.setInterval(16);
-    connect(&frameTimer, &QTimer::timeout, this, &MainWindow::advanceFrame);
-
-    fireWidget->present(simulation.heat());
-    frameTimer.start();
+    presentFrame();
+    fireController->run();
     resize(960, 720);
 }
 
-void MainWindow::advanceFrame() {
-    if (isPaused) {
-        return;
-    }
-    simulation.tick();
-    fireWidget->present(simulation.heat());
+void MainWindow::presentFrame() { fireWidget->present(fireController->heat()); }
+
+void MainWindow::updateRunningState(const bool running) {
+    controlPanel->setPaused(!running);
+    fireWidget->setPaused(!running);
 }
-
-void MainWindow::togglePaused() { setPaused(!isPaused); }
-
-void MainWindow::resetSimulation() {
-    simulation.reset();
-    fireWidget->present(simulation.heat());
-}
-
-void MainWindow::setPaused(const bool paused) {
-    isPaused = paused;
-    controlPanel->setPaused(isPaused);
-    fireWidget->setPaused(isPaused);
-}
-
-void MainWindow::setSourceHeat(const int sourceHeat) {
-    simulation.parameters().setSourceHeat(static_cast<std::uint8_t>(sourceHeat));
-}
-
-void MainWindow::setCooling(const int cooling) {
-    simulation.parameters().setCooling(static_cast<std::uint8_t>(cooling));
-}
-
-void MainWindow::setWind(const int wind) { simulation.parameters().setWind(wind); }

@@ -71,7 +71,7 @@ ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const pare
                                        FireParameters::MAXIMUM_WIND,
                                        parameters.wind());
 
-    connect(pauseButton, &QPushButton::clicked, this, &ControlPanel::pauseRequested);
+    connect(pauseButton, &QPushButton::clicked, this, &ControlPanel::toggleRequested);
     connect(resetButton, &QPushButton::clicked, this, &ControlPanel::resetRequested);
     connect(sourceHeatSlider, &QSlider::valueChanged, this, &ControlPanel::sourceHeatChanged);
     connect(coolingSlider, &QSlider::valueChanged, this, &ControlPanel::coolingChanged);

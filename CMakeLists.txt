@@ -22,6 +22,8 @@ target_compile_features(fire_simulation PUBLIC cxx_std_20)
 add_executable(classic_fire
     src/app/ControlPanel.cpp
     src/app/ControlPanel.hpp
+    src/app/FireController.cpp
+    src/app/FireController.hpp
     src/app/FireWidget.cpp
     src/app/FireWidget.hpp
     src/app/MainWindow.cpp
