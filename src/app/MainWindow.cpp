@@ -1,6 +1,6 @@
-#include "MainWindow.hpp"
+#include "app/MainWindow.hpp"
 
-#include "FireWidget.hpp"
+#include "app/FireWidget.hpp"
 
 #include <QHBoxLayout>
 #include <QKeySequence>

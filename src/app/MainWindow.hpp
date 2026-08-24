@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FireSimulation.hpp"
+#include "sim/FireSimulation.hpp"
 
 #include <QMainWindow>
 #include <QTimer>

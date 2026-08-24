@@ -1,4 +1,4 @@
-#include "FireWidget.hpp"
+#include "app/FireWidget.hpp"
 
 #include <QPaintEvent>
 #include <QPainter>

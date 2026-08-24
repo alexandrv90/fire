@@ -10,20 +10,22 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 add_library(fire_simulation
-    src/FireSimulation.cpp
-    src/FireSimulation.hpp
+    src/sim/FireSimulation.cpp
+    src/sim/FireSimulation.hpp
 )
 
 target_include_directories(fire_simulation PUBLIC src)
 target_compile_features(fire_simulation PUBLIC cxx_std_20)
 
 add_executable(classic_fire
-    src/FireWidget.cpp
-    src/FireWidget.hpp
-    src/MainWindow.cpp
-    src/MainWindow.hpp
+    src/app/FireWidget.cpp
+    src/app/FireWidget.hpp
+    src/app/MainWindow.cpp
+    src/app/MainWindow.hpp
     src/main.cpp
 )
+
+target_include_directories(classic_fire PRIVATE src)
 
 target_link_libraries(classic_fire PRIVATE
     fire_simulation

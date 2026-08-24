@@ -30,6 +30,7 @@ Authoritative coding rules for current project. Apply to all contributors — hu
 
 1. C++20 baseline
 2. **Naming.** `lowerCamelCase` for variables and functions, `PascalCase` for types, `SCREAMING_SNAKE_CASE` for constants, `PascalCase` for filenames matching the primary type
+3. **Simulation boundary.** The simulation library must remain pure C++; no Qt type may ever cross this boundary.
 
 ---
 
@@ -62,5 +63,4 @@ After all code changes are complete and verified (build/tests pass), run **clang
 - Ask before inventing. Don't guess function signatures, file paths, library APIs, or build invocations. If something isn't in the docs or the code, it doesn't exist yet.
 - If two docs disagree, surface the conflict instead of guessing which one is right.
 - If a rule conflicts with the task, stop. Don't silently work around the rule.
-
 

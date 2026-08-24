@@ -1,4 +1,4 @@
-#include "FireSimulation.hpp"
+#include "sim/FireSimulation.hpp"
 
 #include <algorithm>
 #include <limits>
