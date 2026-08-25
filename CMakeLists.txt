@@ -24,6 +24,21 @@ target_include_directories(fire_simulation PUBLIC src)
 target_compile_features(fire_simulation PUBLIC cxx_std_20)
 fire_enable_sanitizers(fire_simulation)
 
+add_library(fire_render
+    src/render/FirePalette.cpp
+    src/render/FirePalette.hpp
+    src/render/FireRenderer.cpp
+    src/render/FireRenderer.hpp
+    src/render/PixelBuffer.cpp
+    src/render/PixelBuffer.hpp
+    src/render/Viewport.hpp
+)
+
+target_include_directories(fire_render PUBLIC src)
+target_compile_features(fire_render PUBLIC cxx_std_20)
+target_link_libraries(fire_render PUBLIC fire_simulation)
+fire_enable_sanitizers(fire_render)
+
 add_library(fire_metrics
     src/metrics/FrameProfiler.cpp
     src/metrics/FrameProfiler.hpp
@@ -94,22 +109,35 @@ if(BUILD_TESTING)
     fire_enable_sanitizers(fire_simulation_tests)
 
     add_test(NAME fire_simulation_tests COMMAND fire_simulation_tests)
+
+    add_executable(fire_render_tests
+        tests/render/RenderTests.cpp
+    )
+
+    target_link_libraries(fire_render_tests PRIVATE fire_render)
+    fire_enable_sanitizers(fire_render_tests)
+
+    add_test(NAME fire_render_tests COMMAND fire_render_tests)
 endif()
 
 if(MSVC)
     target_compile_options(fire_simulation PRIVATE /W4 /permissive-)
+    target_compile_options(fire_render PRIVATE /W4 /permissive-)
     target_compile_options(fire_metrics PRIVATE /W4 /permissive-)
     target_compile_options(classic_fire PRIVATE /W4 /permissive-)
     if(BUILD_TESTING)
         target_compile_options(fire_metrics_tests PRIVATE /W4 /permissive-)
         target_compile_options(fire_simulation_tests PRIVATE /W4 /permissive-)
+        target_compile_options(fire_render_tests PRIVATE /W4 /permissive-)
     endif()
 else()
     target_compile_options(fire_simulation PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(fire_render PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(fire_metrics PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(classic_fire PRIVATE -Wall -Wextra -Wpedantic)
     if(BUILD_TESTING)
         target_compile_options(fire_metrics_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(fire_simulation_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(fire_render_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 endif()

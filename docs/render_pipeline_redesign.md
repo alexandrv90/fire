@@ -662,7 +662,7 @@ Named explicitly so they are not built speculatively:
 - (Decided, 4Hz) What `StatsPanel`'s refresh rate should be. Roughly 4 Hz is assumed in sections 3 and 4.5.
   The underlying numbers are rolling statistics, so a faster refresh trades legibility for no
   additional accuracy.
-- (Decided, keep in FireView, no tests) Whether `Viewport` earns its own translation unit or should stay a private helper on
+- Whether `Viewport` earns its own translation unit or should stay a private helper on
   `FireView`. It is extracted here for testability; the arithmetic is small.
 - Whether `FrameReport::frameIndex` should count wakes rather than produced frames. It counts
   produced frames, so `frameIndex` and the wake count diverge by exactly the number of
