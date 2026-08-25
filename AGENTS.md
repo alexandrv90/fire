@@ -21,6 +21,7 @@ Read these before touching code in the corresponding area.
 | If you're working on…                                          | Read first                                        |
 | -------------------------------------------------------------- | ------------------------------------------------- |
 | Anything                                                       | `README.md`                                       |
+| Rendering, frame loop, or metrics                              | `docs/render_pipeline_redesign.md`                |
 
 ---
 
