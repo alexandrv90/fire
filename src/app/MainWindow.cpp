@@ -10,18 +10,19 @@
 #include <QWidget>
 
 MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
-    setWindowTitle(QStringLiteral("Classic Palette Fire"));
+    setWindowTitle(QStringLiteral("Fire Demo"));
 
     auto* const centralWidget = new QWidget(this);
     auto* const windowLayout = new QVBoxLayout(centralWidget);
     windowLayout->setContentsMargins(0, 0, 0, 0);
     windowLayout->setSpacing(0);
 
-    fireController = new FireController(SIMULATION_WIDTH, SIMULATION_HEIGHT, this);
-    fireWidget = new FireWidget(SIMULATION_WIDTH, SIMULATION_HEIGHT, centralWidget);
+    // TODO: remove duplicate constants
+    auto* const fireController = new FireController(SIMULATION_WIDTH, SIMULATION_HEIGHT, this);
+    auto* const fireWidget = new FireWidget(SIMULATION_WIDTH, SIMULATION_HEIGHT, centralWidget);
     windowLayout->addWidget(fireWidget, 1);
 
-    controlPanel = new ControlPanel(fireController->parameters(), centralWidget);
+    auto* const controlPanel = new ControlPanel(fireController->parameters(), centralWidget);
     windowLayout->addWidget(controlPanel);
     setCentralWidget(centralWidget);
 
@@ -29,8 +30,11 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
     connect(controlPanel, &ControlPanel::sourceHeatChanged, fireController, &FireController::setSourceHeat);
     connect(controlPanel, &ControlPanel::coolingChanged, fireController, &FireController::setCooling);
-    connect(fireController, &FireController::frameReady, this, &MainWindow::presentFrame);
-    connect(fireController, &FireController::runningChanged, this, &MainWindow::updateRunningState);
+    const auto presentLatestFrame = [fireController, fireWidget] { fireWidget->present(fireController->heat()); };
+    connect(fireController, &FireController::frameReady, fireWidget, presentLatestFrame);
+    connect(fireController, &FireController::runningChanged, controlPanel, [controlPanel](const bool running) {
+        controlPanel->setPaused(!running);
+    });
 
     auto* const pauseShortcut = new QShortcut(QKeySequence{Qt::Key_Space}, this);
     auto* const resetShortcut = new QShortcut(QKeySequence{Qt::Key_R}, this);
@@ -39,11 +43,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(resetShortcut, &QShortcut::activated, fireController, &FireController::reset);
     connect(quitShortcut, &QShortcut::activated, this, &QWidget::close);
 
-    presentFrame();
+    presentLatestFrame();
     fireController->run();
     resize(960, 720);
 }
-
-void MainWindow::presentFrame() { fireWidget->present(fireController->heat()); }
-
-void MainWindow::updateRunningState(const bool running) { controlPanel->setPaused(!running); }
