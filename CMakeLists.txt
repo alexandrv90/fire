@@ -84,6 +84,15 @@ if(BUILD_TESTING)
     fire_enable_sanitizers(fire_metrics_tests)
 
     add_test(NAME fire_metrics_tests COMMAND fire_metrics_tests)
+
+    add_executable(fire_simulation_tests
+        tests/sim/FireSimulationTests.cpp
+    )
+
+    target_link_libraries(fire_simulation_tests PRIVATE fire_simulation)
+    fire_enable_sanitizers(fire_simulation_tests)
+
+    add_test(NAME fire_simulation_tests COMMAND fire_simulation_tests)
 endif()
 
 if(MSVC)
@@ -92,6 +101,7 @@ if(MSVC)
     target_compile_options(classic_fire PRIVATE /W4 /permissive-)
     if(BUILD_TESTING)
         target_compile_options(fire_metrics_tests PRIVATE /W4 /permissive-)
+        target_compile_options(fire_simulation_tests PRIVATE /W4 /permissive-)
     endif()
 else()
     target_compile_options(fire_simulation PRIVATE -Wall -Wextra -Wpedantic)
@@ -99,5 +109,6 @@ else()
     target_compile_options(classic_fire PRIVATE -Wall -Wextra -Wpedantic)
     if(BUILD_TESTING)
         target_compile_options(fire_metrics_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(fire_simulation_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 endif()
