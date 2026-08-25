@@ -9,6 +9,9 @@ configure-release:
 configure-profile:
     cmake --fresh --preset cfg-profile
 
+configure-sanitize:
+    cmake --fresh --preset cfg-sanitize
+
 build-debug: configure-debug
     cmake --build --preset build-debug
 
@@ -18,6 +21,9 @@ build-release: configure-release
 build-profile: configure-profile
     cmake --build --preset build-profile
 
+build-sanitize: configure-sanitize
+    cmake --build --preset build-sanitize
+
 build-all: build-debug build-release build-profile
 
 check-format:
@@ -25,3 +31,6 @@ check-format:
 
 run-release: build-release
     cmake --build --preset build-release --target run_app
+
+run-sanitize: build-sanitize
+    ASAN_OPTIONS=halt_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 cmake --build --preset build-sanitize --target run_app

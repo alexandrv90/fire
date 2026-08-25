@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(cmake/Sanitizers.cmake)
+
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
@@ -18,6 +20,7 @@ add_library(fire_simulation
 
 target_include_directories(fire_simulation PUBLIC src)
 target_compile_features(fire_simulation PUBLIC cxx_std_20)
+fire_enable_sanitizers(fire_simulation)
 
 add_executable(classic_fire
     src/app/ControlPanel.cpp
@@ -37,6 +40,7 @@ target_link_libraries(classic_fire PRIVATE
     fire_simulation
     Qt${QT_VERSION_MAJOR}::Widgets
 )
+fire_enable_sanitizers(classic_fire)
 
 set_target_properties(classic_fire PROPERTIES
     AUTOMOC TRUE

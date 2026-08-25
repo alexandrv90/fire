@@ -35,6 +35,18 @@
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
+    },
+    {
+      "name": "cfg-sanitize",
+      "displayName": "App ASan + UBSan",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/sanitize",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "FIRE_ENABLE_ASAN": "ON",
+        "FIRE_ENABLE_UBSAN": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -52,6 +64,11 @@
       "name": "build-profile",
       "displayName": "App Build Release With Debug Info",
       "configurePreset": "cfg-profile"
+    },
+    {
+      "name": "build-sanitize",
+      "displayName": "App Build With ASan + UBSan",
+      "configurePreset": "cfg-sanitize"
     }
   ]
 }
