@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(CTest)
 include(cmake/Sanitizers.cmake)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
@@ -21,6 +22,22 @@ add_library(fire_simulation
 target_include_directories(fire_simulation PUBLIC src)
 target_compile_features(fire_simulation PUBLIC cxx_std_20)
 fire_enable_sanitizers(fire_simulation)
+
+add_library(fire_metrics
+    src/metrics/FrameProfiler.cpp
+    src/metrics/FrameProfiler.hpp
+    src/metrics/IntervalMetric.cpp
+    src/metrics/IntervalMetric.hpp
+    src/metrics/MetricStatistics.hpp
+    src/metrics/ScopedTimer.cpp
+    src/metrics/ScopedTimer.hpp
+    src/metrics/TimeSeriesMetric.cpp
+    src/metrics/TimeSeriesMetric.hpp
+)
+
+target_include_directories(fire_metrics PUBLIC src)
+target_compile_features(fire_metrics PUBLIC cxx_std_20)
+fire_enable_sanitizers(fire_metrics)
 
 add_executable(classic_fire
     src/app/ControlPanel.cpp
@@ -58,10 +75,29 @@ add_custom_target(run_app
     COMMENT "Starting Classic Fire"
 )
 
+if(BUILD_TESTING)
+    add_executable(fire_metrics_tests
+        tests/metrics/MetricsTests.cpp
+    )
+
+    target_link_libraries(fire_metrics_tests PRIVATE fire_metrics)
+    fire_enable_sanitizers(fire_metrics_tests)
+
+    add_test(NAME fire_metrics_tests COMMAND fire_metrics_tests)
+endif()
+
 if(MSVC)
     target_compile_options(fire_simulation PRIVATE /W4 /permissive-)
+    target_compile_options(fire_metrics PRIVATE /W4 /permissive-)
     target_compile_options(classic_fire PRIVATE /W4 /permissive-)
+    if(BUILD_TESTING)
+        target_compile_options(fire_metrics_tests PRIVATE /W4 /permissive-)
+    endif()
 else()
     target_compile_options(fire_simulation PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(fire_metrics PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(classic_fire PRIVATE -Wall -Wextra -Wpedantic)
+    if(BUILD_TESTING)
+        target_compile_options(fire_metrics_tests PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
 endif()
