@@ -53,22 +53,14 @@ void FireController::setCooling(const int cooling) {
 
 void FireController::advanceFrame() {
     const auto now = Clock::now();
-    accumulatedTime += now - elapsedTimeReference;
+    const TickPlan plan = frameClock.consume(now - elapsedTimeReference);
     elapsedTimeReference = now;
 
-    const auto maximumCatchUpTime = SIMULATION_STEP * MAX_TICKS_PER_WAKE;
-    if (accumulatedTime > maximumCatchUpTime) {
-        accumulatedTime = maximumCatchUpTime;
-    }
-
-    int ticksExecuted = 0;
-    while (accumulatedTime >= SIMULATION_STEP && ticksExecuted < MAX_TICKS_PER_WAKE) {
+    for (int tick = 0; tick < plan.ticks; ++tick) {
         simulation.tick();
-        accumulatedTime -= SIMULATION_STEP;
-        ++ticksExecuted;
     }
 
-    if (ticksExecuted > 0) {
+    if (plan.ticks > 0) {
         renderer.render(simulation.heat());
         emit frameReady();
     }

@@ -64,6 +64,8 @@ add_executable(classic_fire
     src/app/FireView.hpp
     src/app/MainWindow.cpp
     src/app/MainWindow.hpp
+    src/engine/FrameClock.cpp
+    src/engine/FrameClock.hpp
     src/main.cpp
 )
 
@@ -119,6 +121,17 @@ if(BUILD_TESTING)
     fire_enable_sanitizers(fire_render_tests)
 
     add_test(NAME fire_render_tests COMMAND fire_render_tests)
+
+    add_executable(fire_engine_tests
+        src/engine/FrameClock.cpp
+        src/engine/FrameClock.hpp
+        tests/engine/FrameClockTests.cpp
+    )
+
+    target_include_directories(fire_engine_tests PRIVATE src)
+    fire_enable_sanitizers(fire_engine_tests)
+
+    add_test(NAME fire_engine_tests COMMAND fire_engine_tests)
 endif()
 
 if(MSVC)
@@ -130,6 +143,7 @@ if(MSVC)
         target_compile_options(fire_metrics_tests PRIVATE /W4 /permissive-)
         target_compile_options(fire_simulation_tests PRIVATE /W4 /permissive-)
         target_compile_options(fire_render_tests PRIVATE /W4 /permissive-)
+        target_compile_options(fire_engine_tests PRIVATE /W4 /permissive-)
     endif()
 else()
     target_compile_options(fire_simulation PRIVATE -Wall -Wextra -Wpedantic)
@@ -140,5 +154,6 @@ else()
         target_compile_options(fire_metrics_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(fire_simulation_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(fire_render_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(fire_engine_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 endif()

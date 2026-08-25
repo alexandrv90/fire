@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/FrameClock.hpp"
 #include "render/FireRenderer.hpp"
 #include "sim/FireSimulation.hpp"
 
@@ -40,11 +41,10 @@ private:
     static constexpr int WAKE_INTERVAL_MILLISECONDS = 16;
     static constexpr int SIMULATION_TICKS_PER_SECOND = 60;
     static constexpr int MAX_TICKS_PER_WAKE = 3;
-    static constexpr std::chrono::duration<double> SIMULATION_STEP{1.0 / SIMULATION_TICKS_PER_SECOND};
 
     FireSimulation simulation;
     FireRenderer renderer;
+    FrameClock frameClock{SIMULATION_TICKS_PER_SECOND, MAX_TICKS_PER_WAKE};
     QTimer wakeTimer;
     Clock::time_point elapsedTimeReference;
-    std::chrono::duration<double> accumulatedTime{0.0};
 };
