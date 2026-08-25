@@ -3,7 +3,8 @@
 FireController::FireController(const std::size_t simulationWidth,
                                const std::size_t simulationHeight,
                                QObject* const parent)
-    : QObject(parent), simulation(simulationWidth, simulationHeight) {
+    : QObject(parent), simulation(simulationWidth, simulationHeight), renderer(FirePalette::classic()) {
+    renderer.render(simulation.heat());
     wakeTimer.setTimerType(Qt::PreciseTimer);
     wakeTimer.setInterval(WAKE_INTERVAL_MILLISECONDS);
     connect(&wakeTimer, &QTimer::timeout, this, &FireController::advanceFrame);
@@ -38,6 +39,7 @@ void FireController::toggleRunning() {
 
 void FireController::reset() {
     simulation.reset();
+    renderer.render(simulation.heat());
     emit frameReady();
 }
 
@@ -67,6 +69,7 @@ void FireController::advanceFrame() {
     }
 
     if (ticksExecuted > 0) {
+        renderer.render(simulation.heat());
         emit frameReady();
     }
 }

@@ -2,7 +2,7 @@
 
 #include "app/ControlPanel.hpp"
 #include "app/FireController.hpp"
-#include "app/FireWidget.hpp"
+#include "app/FireView.hpp"
 
 #include <QKeySequence>
 #include <QShortcut>
@@ -18,8 +18,9 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     windowLayout->setSpacing(0);
 
     auto* const fireController = new FireController(SIMULATION_WIDTH, SIMULATION_HEIGHT, this);
-    auto* const fireWidget = new FireWidget(centralWidget);
-    windowLayout->addWidget(fireWidget, 1);
+    auto* const fireView = new FireView(centralWidget);
+    fireView->present(fireController->frame());
+    windowLayout->addWidget(fireView, 1);
 
     auto* const controlPanel = new ControlPanel(fireController->parameters(), centralWidget);
     windowLayout->addWidget(controlPanel);
@@ -29,8 +30,9 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
     connect(controlPanel, &ControlPanel::sourceHeatChanged, fireController, &FireController::setSourceHeat);
     connect(controlPanel, &ControlPanel::coolingChanged, fireController, &FireController::setCooling);
-    const auto presentLatestFrame = [fireController, fireWidget] { fireWidget->present(fireController->heat()); };
-    connect(fireController, &FireController::frameReady, fireWidget, presentLatestFrame);
+    connect(fireController, &FireController::frameReady, fireView, [fireController, fireView] {
+        fireView->present(fireController->frame());
+    });
     connect(fireController, &FireController::runningChanged, controlPanel, [controlPanel](const bool running) {
         controlPanel->setPaused(!running);
     });
@@ -42,7 +44,6 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(resetShortcut, &QShortcut::activated, fireController, &FireController::reset);
     connect(quitShortcut, &QShortcut::activated, this, &QWidget::close);
 
-    presentLatestFrame();
     fireController->run();
     resize(960, 720);
 }

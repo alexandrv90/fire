@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render/FireRenderer.hpp"
 #include "sim/FireSimulation.hpp"
 
 #include <QObject>
@@ -15,7 +16,7 @@ public:
     explicit FireController(std::size_t simulationWidth, std::size_t simulationHeight, QObject* parent = nullptr);
 
     [[nodiscard]] bool isRunning() const noexcept { return wakeTimer.isActive(); }
-    [[nodiscard]] HeatFrame heat() const noexcept { return simulation.heat(); }
+    [[nodiscard]] const PixelBuffer& frame() const noexcept { return renderer.target(); }
     [[nodiscard]] const FireParameters& parameters() const noexcept { return simulation.parameters(); }
 
 public slots:
@@ -42,6 +43,7 @@ private:
     static constexpr std::chrono::duration<double> SIMULATION_STEP{1.0 / SIMULATION_TICKS_PER_SECOND};
 
     FireSimulation simulation;
+    FireRenderer renderer;
     QTimer wakeTimer;
     Clock::time_point elapsedTimeReference;
     std::chrono::duration<double> accumulatedTime{0.0};

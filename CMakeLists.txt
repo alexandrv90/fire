@@ -60,8 +60,8 @@ add_executable(classic_fire
     src/app/ControlPanel.hpp
     src/app/FireController.cpp
     src/app/FireController.hpp
-    src/app/FireWidget.cpp
-    src/app/FireWidget.hpp
+    src/app/FireView.cpp
+    src/app/FireView.hpp
     src/app/MainWindow.cpp
     src/app/MainWindow.hpp
     src/main.cpp
@@ -70,6 +70,7 @@ add_executable(classic_fire
 target_include_directories(classic_fire PRIVATE src)
 
 target_link_libraries(classic_fire PRIVATE
+    fire_render
     fire_simulation
     Qt${QT_VERSION_MAJOR}::Widgets
 )
