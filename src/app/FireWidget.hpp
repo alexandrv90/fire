@@ -1,17 +1,17 @@
 #pragma once
 
+#include "sim/HeatFrame.hpp"
+
 #include <QImage>
 #include <QWidget>
 
 #include <array>
-#include <cstdint>
-#include <span>
 
 class FireWidget final : public QWidget {
 public:
-    explicit FireWidget(int simulationWidth, int simulationHeight, QWidget* parent = nullptr);
+    explicit FireWidget(QWidget* parent = nullptr);
 
-    void present(std::span<const std::uint8_t> heat) noexcept;
+    void present(const HeatFrame& heat) noexcept;
 
     [[nodiscard]] QSize minimumSizeHint() const override;
     [[nodiscard]] QSize sizeHint() const override;

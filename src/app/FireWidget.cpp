@@ -5,6 +5,8 @@
 
 #include <array>
 #include <cassert>
+#include <limits>
+#include <span>
 
 namespace {
 struct PaletteStop {
@@ -25,27 +27,34 @@ constexpr std::array PALETTE_STOPS{
 };
 } // namespace
 
-FireWidget::FireWidget(const int simulationWidth, const int simulationHeight, QWidget* const parent)
-    : QWidget(parent), frame(simulationWidth, simulationHeight, QImage::Format_RGB32), palette(makePalette()) {
-    assert(!frame.isNull());
+FireWidget::FireWidget(QWidget* const parent) : QWidget(parent), palette(makePalette()) {
     setAttribute(Qt::WA_OpaquePaintEvent);
     setAutoFillBackground(false);
     setFocusPolicy(Qt::StrongFocus);
-    frame.fill(Qt::black);
 }
 
-void FireWidget::present(const std::span<const std::uint8_t> heat) noexcept {
-    const auto expectedSize = static_cast<std::size_t>(frame.width()) * static_cast<std::size_t>(frame.height());
-    assert(heat.size() == expectedSize);
-    if (heat.size() != expectedSize) {
+void FireWidget::present(const HeatFrame& heat) noexcept {
+    constexpr auto MAXIMUM_IMAGE_DIMENSION = static_cast<std::size_t>(std::numeric_limits<int>::max());
+    assert(heat.width() <= MAXIMUM_IMAGE_DIMENSION && heat.height() <= MAXIMUM_IMAGE_DIMENSION);
+    if (heat.width() > MAXIMUM_IMAGE_DIMENSION || heat.height() > MAXIMUM_IMAGE_DIMENSION) {
         return;
     }
 
-    std::size_t sourceOffset = 0;
-    for (int y = 0; y < frame.height(); ++y) {
-        auto* const destination = reinterpret_cast<QRgb*>(frame.scanLine(y));
-        for (int x = 0; x < frame.width(); ++x) {
-            destination[x] = palette[heat[sourceOffset++]];
+    const auto frameWidth = static_cast<int>(heat.width());
+    const auto frameHeight = static_cast<int>(heat.height());
+    if (frame.width() != frameWidth || frame.height() != frameHeight) {
+        frame = QImage(frameWidth, frameHeight, QImage::Format_RGB32);
+        assert(!frame.isNull());
+        if (frame.isNull()) {
+            return;
+        }
+    }
+
+    for (std::size_t y = 0; y < heat.height(); ++y) {
+        const std::span<const std::uint8_t> source = heat.row(y);
+        auto* const destination = reinterpret_cast<QRgb*>(frame.scanLine(static_cast<int>(y)));
+        for (std::size_t x = 0; x < source.size(); ++x) {
+            destination[x] = palette[source[x]];
         }
     }
 
@@ -88,7 +97,7 @@ std::array<QRgb, 256> FireWidget::makePalette() noexcept {
 QRect FireWidget::fittedFrameRect() const noexcept {
     const int availableWidth = width();
     const int availableHeight = height();
-    if (availableWidth <= 0 || availableHeight <= 0) {
+    if (availableWidth <= 0 || availableHeight <= 0 || frame.isNull()) {
         return {};
     }
 

@@ -1,10 +1,10 @@
 #pragma once
 
 #include "sim/FireParameters.hpp"
+#include "sim/HeatFrame.hpp"
 
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <vector>
 
 class FireSimulation final {
@@ -16,7 +16,7 @@ public:
 
     [[nodiscard]] std::size_t width() const noexcept { return simulationWidth; }
     [[nodiscard]] std::size_t height() const noexcept { return simulationHeight; }
-    [[nodiscard]] std::span<const std::uint8_t> heat() const noexcept { return heatMap; }
+    [[nodiscard]] HeatFrame heat() const noexcept { return {heatMap, simulationWidth, simulationHeight}; }
 
     // Parameters clamp themselves, so exposing them mutably cannot invalidate the
     // simulation: tick() re-reads them each frame and holds no derived state.

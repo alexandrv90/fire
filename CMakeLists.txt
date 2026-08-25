@@ -17,6 +17,7 @@ add_library(fire_simulation
     src/sim/FireParameters.hpp
     src/sim/FireSimulation.cpp
     src/sim/FireSimulation.hpp
+    src/sim/HeatFrame.hpp
 )
 
 target_include_directories(fire_simulation PUBLIC src)

@@ -7,8 +7,6 @@
 
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
-#include <span>
 
 class FireController final : public QObject {
     Q_OBJECT
@@ -17,7 +15,7 @@ public:
     explicit FireController(std::size_t simulationWidth, std::size_t simulationHeight, QObject* parent = nullptr);
 
     [[nodiscard]] bool isRunning() const noexcept { return wakeTimer.isActive(); }
-    [[nodiscard]] std::span<const std::uint8_t> heat() const noexcept { return simulation.heat(); }
+    [[nodiscard]] HeatFrame heat() const noexcept { return simulation.heat(); }
     [[nodiscard]] const FireParameters& parameters() const noexcept { return simulation.parameters(); }
 
 public slots:

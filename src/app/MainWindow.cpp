@@ -17,9 +17,8 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     windowLayout->setContentsMargins(0, 0, 0, 0);
     windowLayout->setSpacing(0);
 
-    // TODO: remove duplicate constants
     auto* const fireController = new FireController(SIMULATION_WIDTH, SIMULATION_HEIGHT, this);
-    auto* const fireWidget = new FireWidget(SIMULATION_WIDTH, SIMULATION_HEIGHT, centralWidget);
+    auto* const fireWidget = new FireWidget(centralWidget);
     windowLayout->addWidget(fireWidget, 1);
 
     auto* const controlPanel = new ControlPanel(fireController->parameters(), centralWidget);

@@ -5,7 +5,6 @@
 #include <exception>
 #include <iostream>
 #include <limits>
-#include <span>
 #include <stdexcept>
 #include <string_view>
 
@@ -55,12 +54,12 @@ void checkInvalidDimensions(const std::size_t width, const std::size_t height, c
     ++failureCount;
 }
 
-[[nodiscard]] std::uint64_t heatHash(const std::span<const std::uint8_t> heat) noexcept {
+[[nodiscard]] std::uint64_t heatHash(const HeatFrame& heat) noexcept {
     constexpr std::uint64_t FNV_OFFSET_BASIS = 14'695'981'039'346'656'037ull;
     constexpr std::uint64_t FNV_PRIME = 1'099'511'628'211ull;
 
     std::uint64_t hash = FNV_OFFSET_BASIS;
-    for (const std::uint8_t cell : heat) {
+    for (const std::uint8_t cell : heat.cells()) {
         hash ^= cell;
         hash *= FNV_PRIME;
     }
@@ -75,10 +74,16 @@ void advance(FireSimulation& simulation, const int tickCount) noexcept {
 
 void testConstruction() {
     const FireSimulation simulation{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
+    const HeatFrame heat = simulation.heat();
 
     check(simulation.width() == SIMULATION_WIDTH, "simulation reports its width");
     check(simulation.height() == SIMULATION_HEIGHT, "simulation reports its height");
-    check(simulation.heat().size() == SIMULATION_WIDTH * SIMULATION_HEIGHT, "simulation heat map matches its geometry");
+    check(heat.width() == SIMULATION_WIDTH, "heat frame reports the simulation width");
+    check(heat.height() == SIMULATION_HEIGHT, "heat frame reports the simulation height");
+    check(heat.cells().size() == SIMULATION_WIDTH * SIMULATION_HEIGHT, "heat frame matches its geometry");
+    check(heat.row(0).size() == SIMULATION_WIDTH, "heat frame exposes complete rows");
+    check(heat.row(SIMULATION_HEIGHT - 1).data() == heat.cells().data() + (SIMULATION_HEIGHT - 1) * SIMULATION_WIDTH,
+          "heat frame locates its final row");
 
     checkInvalidDimensions<std::invalid_argument>(1, 2, "simulation rejects a width below two");
     checkInvalidDimensions<std::invalid_argument>(2, 1, "simulation rejects a height below two");
