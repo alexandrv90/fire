@@ -1,5 +1,6 @@
 #pragma once
 
+#include "metrics/IntervalMetric.hpp"
 #include "render/PixelBuffer.hpp"
 
 #include <QImage>
@@ -7,7 +8,7 @@
 
 class FireView final : public QWidget {
 public:
-    explicit FireView(QWidget* parent = nullptr);
+    explicit FireView(IntervalMetric& presentInterval, QWidget* parent = nullptr);
 
     void present(const PixelBuffer& pixels);
 
@@ -18,5 +19,6 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    IntervalMetric& presentInterval;
     QImage frame;
 };

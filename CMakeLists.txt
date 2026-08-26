@@ -55,6 +55,23 @@ target_include_directories(fire_metrics PUBLIC src)
 target_compile_features(fire_metrics PUBLIC cxx_std_20)
 fire_enable_sanitizers(fire_metrics)
 
+add_library(fire_engine
+    src/engine/FireEngine.cpp
+    src/engine/FireEngine.hpp
+    src/engine/FrameClock.cpp
+    src/engine/FrameClock.hpp
+    src/engine/FrameReport.hpp
+)
+
+target_include_directories(fire_engine PUBLIC src)
+target_compile_features(fire_engine PUBLIC cxx_std_20)
+target_link_libraries(fire_engine PUBLIC
+    fire_simulation
+    fire_render
+    fire_metrics
+)
+fire_enable_sanitizers(fire_engine)
+
 add_executable(classic_fire
     src/app/ControlPanel.cpp
     src/app/ControlPanel.hpp
@@ -64,16 +81,14 @@ add_executable(classic_fire
     src/app/FireView.hpp
     src/app/MainWindow.cpp
     src/app/MainWindow.hpp
-    src/engine/FrameClock.cpp
-    src/engine/FrameClock.hpp
     src/main.cpp
 )
 
 target_include_directories(classic_fire PRIVATE src)
 
 target_link_libraries(classic_fire PRIVATE
-    fire_render
-    fire_simulation
+    fire_engine
+    fire_metrics
     Qt${QT_VERSION_MAJOR}::Widgets
 )
 fire_enable_sanitizers(classic_fire)
@@ -123,12 +138,10 @@ if(BUILD_TESTING)
     add_test(NAME fire_render_tests COMMAND fire_render_tests)
 
     add_executable(fire_engine_tests
-        src/engine/FrameClock.cpp
-        src/engine/FrameClock.hpp
         tests/engine/FrameClockTests.cpp
     )
 
-    target_include_directories(fire_engine_tests PRIVATE src)
+    target_link_libraries(fire_engine_tests PRIVATE fire_engine)
     fire_enable_sanitizers(fire_engine_tests)
 
     add_test(NAME fire_engine_tests COMMAND fire_engine_tests)
@@ -138,6 +151,7 @@ if(MSVC)
     target_compile_options(fire_simulation PRIVATE /W4 /permissive-)
     target_compile_options(fire_render PRIVATE /W4 /permissive-)
     target_compile_options(fire_metrics PRIVATE /W4 /permissive-)
+    target_compile_options(fire_engine PRIVATE /W4 /permissive-)
     target_compile_options(classic_fire PRIVATE /W4 /permissive-)
     if(BUILD_TESTING)
         target_compile_options(fire_metrics_tests PRIVATE /W4 /permissive-)
@@ -149,6 +163,7 @@ else()
     target_compile_options(fire_simulation PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(fire_render PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(fire_metrics PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(fire_engine PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(classic_fire PRIVATE -Wall -Wextra -Wpedantic)
     if(BUILD_TESTING)
         target_compile_options(fire_metrics_tests PRIVATE -Wall -Wextra -Wpedantic)

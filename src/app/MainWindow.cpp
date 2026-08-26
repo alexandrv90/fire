@@ -9,6 +9,8 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include <cstdint>
+
 MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     setWindowTitle(QStringLiteral("Fire Demo"));
 
@@ -18,7 +20,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     windowLayout->setSpacing(0);
 
     auto* const fireController = new FireController(SIMULATION_WIDTH, SIMULATION_HEIGHT, this);
-    auto* const fireView = new FireView(centralWidget);
+    auto* const fireView = new FireView(fireController->profiler().presentInterval, centralWidget);
     fireView->present(fireController->frame());
     windowLayout->addWidget(fireView, 1);
 
@@ -28,9 +30,17 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
 
     connect(controlPanel, &ControlPanel::toggleRequested, fireController, &FireController::toggleRunning);
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
-    connect(controlPanel, &ControlPanel::sourceHeatChanged, fireController, &FireController::setSourceHeat);
-    connect(controlPanel, &ControlPanel::coolingChanged, fireController, &FireController::setCooling);
-    connect(fireController, &FireController::frameReady, fireView, [fireController, fireView] {
+    connect(controlPanel, &ControlPanel::sourceHeatChanged, fireController, [fireController](const int sourceHeat) {
+        FireParameters parameters = fireController->parameters();
+        parameters.setSourceHeat(static_cast<std::uint8_t>(sourceHeat));
+        fireController->setParameters(parameters);
+    });
+    connect(controlPanel, &ControlPanel::coolingChanged, fireController, [fireController](const int cooling) {
+        FireParameters parameters = fireController->parameters();
+        parameters.setCooling(static_cast<std::uint8_t>(cooling));
+        fireController->setParameters(parameters);
+    });
+    connect(fireController, &FireController::frameReady, fireView, [fireController, fireView](const FrameReport&) {
         fireView->present(fireController->frame());
     });
     connect(fireController, &FireController::runningChanged, controlPanel, [controlPanel](const bool running) {

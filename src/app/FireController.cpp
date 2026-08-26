@@ -3,11 +3,10 @@
 FireController::FireController(const std::size_t simulationWidth,
                                const std::size_t simulationHeight,
                                QObject* const parent)
-    : QObject(parent), simulation(simulationWidth, simulationHeight), renderer(FirePalette::classic()) {
-    renderer.render(simulation.heat());
+    : QObject(parent), engine(simulationWidth, simulationHeight) {
     wakeTimer.setTimerType(Qt::PreciseTimer);
     wakeTimer.setInterval(WAKE_INTERVAL_MILLISECONDS);
-    connect(&wakeTimer, &QTimer::timeout, this, &FireController::advanceFrame);
+    connect(&wakeTimer, &QTimer::timeout, this, &FireController::onWake);
 }
 
 void FireController::run() {
@@ -15,7 +14,7 @@ void FireController::run() {
         return;
     }
 
-    elapsedTimeReference = Clock::now();
+    lastWake = Clock::now();
     wakeTimer.start();
     emit runningChanged(true);
 }
@@ -38,30 +37,28 @@ void FireController::toggleRunning() {
 }
 
 void FireController::reset() {
-    simulation.reset();
-    renderer.render(simulation.heat());
-    emit frameReady();
-}
-
-void FireController::setSourceHeat(const int sourceHeat) {
-    simulation.parameters().setSourceHeat(static_cast<std::uint8_t>(sourceHeat));
-}
-
-void FireController::setCooling(const int cooling) {
-    simulation.parameters().setCooling(static_cast<std::uint8_t>(cooling));
-}
-
-void FireController::advanceFrame() {
-    const auto now = Clock::now();
-    const TickPlan plan = frameClock.consume(now - elapsedTimeReference);
-    elapsedTimeReference = now;
-
-    for (int tick = 0; tick < plan.ticks; ++tick) {
-        simulation.tick();
+    engine.reset();
+    if (isRunning()) {
+        lastWake = Clock::now();
     }
 
-    if (plan.ticks > 0) {
-        renderer.render(simulation.heat());
-        emit frameReady();
+    emit parametersChanged(engine.parameters());
+    emit frameReady(FrameReport{});
+}
+
+void FireController::setParameters(const FireParameters& parameters) {
+    engine.setParameters(parameters);
+    emit parametersChanged(engine.parameters());
+}
+
+void FireController::onWake() {
+    const auto now = Clock::now();
+    const auto elapsed = now - lastWake;
+    lastWake = now;
+    engine.profiler().wakeInterval.mark(now);
+
+    const FrameReport report = engine.advance(elapsed);
+    if (report.ticksExecuted > 0) {
+        emit frameReady(report);
     }
 }

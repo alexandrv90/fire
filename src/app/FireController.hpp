@@ -1,8 +1,6 @@
 #pragma once
 
-#include "engine/FrameClock.hpp"
-#include "render/FireRenderer.hpp"
-#include "sim/FireSimulation.hpp"
+#include "engine/FireEngine.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -17,34 +15,32 @@ public:
     explicit FireController(std::size_t simulationWidth, std::size_t simulationHeight, QObject* parent = nullptr);
 
     [[nodiscard]] bool isRunning() const noexcept { return wakeTimer.isActive(); }
-    [[nodiscard]] const PixelBuffer& frame() const noexcept { return renderer.target(); }
-    [[nodiscard]] const FireParameters& parameters() const noexcept { return simulation.parameters(); }
+    [[nodiscard]] const PixelBuffer& frame() const noexcept { return engine.frame(); }
+    [[nodiscard]] const FireParameters& parameters() const noexcept { return engine.parameters(); }
+    [[nodiscard]] FrameProfiler& profiler() noexcept { return engine.profiler(); }
+    [[nodiscard]] const FrameProfiler& profiler() const noexcept { return engine.profiler(); }
 
 public slots:
     void run();
     void pause();
     void toggleRunning();
     void reset();
-    void setSourceHeat(int sourceHeat);
-    void setCooling(int cooling);
+    void setParameters(const FireParameters& parameters);
 
 signals:
-    void frameReady();
+    void frameReady(FrameReport report);
+    void parametersChanged(FireParameters parameters);
     void runningChanged(bool running);
 
 private slots:
-    void advanceFrame();
+    void onWake();
 
 private:
     using Clock = std::chrono::steady_clock;
 
     static constexpr int WAKE_INTERVAL_MILLISECONDS = 16;
-    static constexpr int SIMULATION_TICKS_PER_SECOND = 60;
-    static constexpr int MAX_TICKS_PER_WAKE = 3;
 
-    FireSimulation simulation;
-    FireRenderer renderer;
-    FrameClock frameClock{SIMULATION_TICKS_PER_SECOND, MAX_TICKS_PER_WAKE};
+    FireEngine engine;
     QTimer wakeTimer;
-    Clock::time_point elapsedTimeReference;
+    Clock::time_point lastWake;
 };

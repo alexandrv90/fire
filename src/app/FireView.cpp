@@ -10,7 +10,8 @@
 #include <cstring>
 #include <limits>
 
-FireView::FireView(QWidget* const parent) : QWidget(parent) {
+FireView::FireView(IntervalMetric& presentInterval, QWidget* const parent)
+    : QWidget(parent), presentInterval(presentInterval) {
     setAttribute(Qt::WA_OpaquePaintEvent);
     setAutoFillBackground(false);
     setFocusPolicy(Qt::StrongFocus);
@@ -60,4 +61,5 @@ void FireView::paintEvent(QPaintEvent* const event) {
 
     const FitRect fitted = fitPreservingAspect(width(), height(), frame.width(), frame.height());
     painter.drawImage(QRect{fitted.x, fitted.y, fitted.width, fitted.height}, frame);
+    presentInterval.mark(IntervalMetric::Clock::now());
 }
