@@ -6,13 +6,12 @@
 #include <QTimer>
 
 #include <chrono>
-#include <cstddef>
 
 class FireController final : public QObject {
     Q_OBJECT
 
 public:
-    explicit FireController(std::size_t simulationWidth, std::size_t simulationHeight, QObject* parent = nullptr);
+    explicit FireController(QObject* parent = nullptr);
 
     [[nodiscard]] bool isRunning() const noexcept { return wakeTimer.isActive(); }
     [[nodiscard]] const PixelBuffer& frame() const noexcept { return engine.frame(); }

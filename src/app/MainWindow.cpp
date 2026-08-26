@@ -21,7 +21,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     windowLayout->setSpacing(0);
 
     auto* const frameMetricsCollector = new FrameMetricsCollector(this);
-    auto* const fireController = new FireController(SIMULATION_WIDTH, SIMULATION_HEIGHT, this);
+    auto* const fireController = new FireController(this);
 
     auto* const renderArea = new QWidget(centralWidget);
     auto* const renderStack = new QStackedLayout(renderArea);

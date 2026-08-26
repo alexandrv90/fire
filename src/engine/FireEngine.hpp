@@ -12,7 +12,7 @@
 
 class FireEngine final {
 public:
-    FireEngine(std::size_t simulationWidth, std::size_t simulationHeight);
+    FireEngine(std::size_t simulationWidth = SIMULATION_WIDTH, std::size_t simulationHeight = SIMULATION_HEIGHT);
 
     [[nodiscard]] FrameReport advance(std::chrono::steady_clock::duration elapsed);
     void reset() noexcept;
@@ -25,6 +25,8 @@ public:
     void setStageTimingEnabled(bool enabled) noexcept { stageTimingEnabled = enabled; }
 
 private:
+    static constexpr int SIMULATION_WIDTH = 800;
+    static constexpr int SIMULATION_HEIGHT = 600;
     static constexpr int SIMULATION_TICKS_PER_SECOND = 60;
     static constexpr int MAXIMUM_TICKS_PER_WAKE = 3;
 
