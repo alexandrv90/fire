@@ -1,26 +1,15 @@
 #include "app/ControlPanel.hpp"
 
 #include "sim/FireParameters.hpp"
+#include "tests_common.h"
 
 #include <QApplication>
 #include <QObject>
 #include <QPushButton>
 #include <QSlider>
 
-#include <iostream>
-#include <string_view>
-
 namespace {
-int failureCount = 0;
-
-void check(const bool condition, const std::string_view message) {
-    if (condition) {
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << '\n';
-    ++failureCount;
-}
+using fire_tests::check;
 
 QSlider* findSlider(ControlPanel& panel, const int minimum, const int maximum) {
     const auto sliders = panel.findChildren<QSlider*>();
@@ -123,11 +112,5 @@ int main(int argc, char* argv[]) {
     testParameterValueBinding();
     testMetricsToggleBinding();
 
-    if (failureCount != 0) {
-        std::cerr << failureCount << " control panel test assertion(s) failed\n";
-        return 1;
-    }
-
-    std::cout << "All control panel tests passed\n";
-    return 0;
+    return fire_tests::reportResults("control panel");
 }

@@ -1,30 +1,16 @@
 #include "app/FrameMetricsCollector.hpp"
+#include "tests_common.h"
 
 #include <QObject>
 
 #include <chrono>
-#include <cmath>
-#include <iostream>
 #include <string_view>
 
 namespace {
 using namespace std::chrono_literals;
 
-int failureCount = 0;
-
-void check(const bool condition, const std::string_view message) {
-    if (condition) {
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << '\n';
-    ++failureCount;
-}
-
-void checkNear(const double actual, const double expected, const std::string_view message) {
-    constexpr double TOLERANCE = 1e-9;
-    check(std::abs(actual - expected) <= TOLERANCE, message);
-}
+using fire_tests::check;
+using fire_tests::checkNear;
 
 void checkEmpty(const MetricStatistics& statistics, const std::string_view context) {
     check(statistics.sampleCount == 0, context);
@@ -126,11 +112,5 @@ int main() {
     testDisabledCollectorDoesNoCollectionWork();
     testEnableStartsFreshMeasurementSession();
 
-    if (failureCount != 0) {
-        std::cerr << failureCount << " frame metrics collector test assertion(s) failed\n";
-        return 1;
-    }
-
-    std::cout << "All frame metrics collector tests passed\n";
-    return 0;
+    return fire_tests::reportResults("frame metrics collector");
 }

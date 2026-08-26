@@ -1,10 +1,9 @@
 #include "engine/FireEngine.hpp"
 #include "engine/FrameClock.hpp"
+#include "tests_common.h"
 
 #include <chrono>
 #include <cstddef>
-#include <exception>
-#include <iostream>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -12,16 +11,7 @@
 namespace {
 using namespace std::chrono_literals;
 
-int failureCount = 0;
-
-void check(const bool condition, const std::string_view message) {
-    if (condition) {
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << '\n';
-    ++failureCount;
-}
+using fire_tests::check;
 
 void checkPlan(const TickPlan& plan,
                const int expectedTicks,
@@ -30,31 +20,11 @@ void checkPlan(const TickPlan& plan,
     check(plan.ticks == expectedTicks && plan.discardedTime == expectedDiscardedTime, message);
 }
 
-template <typename Action>
-void checkInvalidArgument(Action action, const std::string_view message) {
-    try {
-        action();
-    } catch (const std::invalid_argument&) {
-        return;
-    } catch (const std::exception& exception) {
-        std::cerr << "FAILED: " << message << " (unexpected exception: " << exception.what() << ")\n";
-        ++failureCount;
-        return;
-    } catch (...) {
-        std::cerr << "FAILED: " << message << " (unexpected non-standard exception)\n";
-        ++failureCount;
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << " (no exception)\n";
-    ++failureCount;
-}
-
 void testConstructionValidation() {
-    checkInvalidArgument([] { [[maybe_unused]] const FrameClock clock{0, 3}; },
-                         "frame clock requires a positive tick rate");
-    checkInvalidArgument([] { [[maybe_unused]] const FrameClock clock{60, 0}; },
-                         "frame clock requires a positive catch-up limit");
+    fire_tests::checkThrows<std::invalid_argument>([] { [[maybe_unused]] const FrameClock clock{0, 3}; },
+                                                   "frame clock requires a positive tick rate");
+    fire_tests::checkThrows<std::invalid_argument>([] { [[maybe_unused]] const FrameClock clock{60, 0}; },
+                                                   "frame clock requires a positive catch-up limit");
 }
 
 void testElapsedTimeAccumulates() {
@@ -171,11 +141,5 @@ int main() {
     testEngineReportsCatchUpAndParameters();
     testEngineResetRestoresInitialState();
 
-    if (failureCount != 0) {
-        std::cerr << failureCount << " engine test assertion(s) failed\n";
-        return 1;
-    }
-
-    std::cout << "All engine tests passed\n";
-    return 0;
+    return fire_tests::reportResults("engine");
 }

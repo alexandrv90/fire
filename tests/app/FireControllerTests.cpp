@@ -1,22 +1,12 @@
 #include "app/FireController.hpp"
+#include "tests_common.h"
 
 #include <QCoreApplication>
 
-#include <iostream>
-#include <string_view>
 #include <vector>
 
 namespace {
-int failureCount = 0;
-
-void check(const bool condition, const std::string_view message) {
-    if (condition) {
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << '\n';
-    ++failureCount;
-}
+using fire_tests::check;
 
 void testSuspensionPreservesRequestedRunState() {
     FireController controller;
@@ -80,11 +70,5 @@ int main(int argc, char* argv[]) {
     testPausedControllerStaysPausedAcrossSuspension();
     testRunRequestWhileSuspendedWaitsForRestore();
 
-    if (failureCount != 0) {
-        std::cerr << failureCount << " fire controller test assertion(s) failed\n";
-        return 1;
-    }
-
-    std::cout << "All fire controller tests passed\n";
-    return 0;
+    return fire_tests::reportResults("fire controller");
 }

@@ -26,6 +26,9 @@ build-sanitize: configure-sanitize
 
 build-all: build-debug build-release build-profile
 
+test: build-debug
+    ctest --test-dir build/debug --output-on-failure
+
 check-format:
     clang-format --dry-run --Werror `rg --files src -g '*.{c,cc,cpp,cxx,h,hh,hpp,hxx}'`
 

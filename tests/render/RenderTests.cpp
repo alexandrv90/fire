@@ -3,27 +3,18 @@
 #include "render/PixelBuffer.hpp"
 #include "render/Viewport.hpp"
 #include "sim/HeatFrame.hpp"
+#include "tests_common.h"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <exception>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
 #include <string_view>
 
 namespace {
-int failureCount = 0;
-
-void check(const bool condition, const std::string_view message) {
-    if (condition) {
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << '\n';
-    ++failureCount;
-}
+using fire_tests::check;
 
 void checkColor(const Rgba32 actual, const Rgba32 expected, const std::string_view message) {
     if (actual == expected) {
@@ -32,27 +23,7 @@ void checkColor(const Rgba32 actual, const Rgba32 expected, const std::string_vi
 
     std::cerr << "FAILED: " << message << " (expected 0x" << std::hex << expected << ", got 0x" << actual << std::dec
               << ")\n";
-    ++failureCount;
-}
-
-template <typename Action>
-void checkInvalidArgument(Action action, const std::string_view message) {
-    try {
-        action();
-    } catch (const std::invalid_argument&) {
-        return;
-    } catch (const std::exception& exception) {
-        std::cerr << "FAILED: " << message << " (unexpected exception: " << exception.what() << ")\n";
-        ++failureCount;
-        return;
-    } catch (...) {
-        std::cerr << "FAILED: " << message << " (unexpected non-standard exception)\n";
-        ++failureCount;
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << " (no exception)\n";
-    ++failureCount;
+    fire_tests::recordFailure();
 }
 
 void testPixelBufferGeometry() {
@@ -119,16 +90,16 @@ void testPaletteValidation() {
         PaletteStop{255, 255, 255, 255},
     };
 
-    checkInvalidArgument([&] { static_cast<void>(FirePalette::fromStops(noStops)); },
-                         "palette rejects an empty stop list");
-    checkInvalidArgument([&] { static_cast<void>(FirePalette::fromStops(missingFirstStop)); },
-                         "palette requires its first stop at index zero");
-    checkInvalidArgument([&] { static_cast<void>(FirePalette::fromStops(missingLastStop)); },
-                         "palette requires its final stop at index 255");
-    checkInvalidArgument([&] { static_cast<void>(FirePalette::fromStops(duplicateStop)); },
-                         "palette rejects duplicate stop indices");
-    checkInvalidArgument([&] { static_cast<void>(FirePalette::fromStops(descendingStops)); },
-                         "palette rejects descending stop indices");
+    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(noStops)); },
+                                                   "palette rejects an empty stop list");
+    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(missingFirstStop)); },
+                                                   "palette requires its first stop at index zero");
+    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(missingLastStop)); },
+                                                   "palette requires its final stop at index 255");
+    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(duplicateStop)); },
+                                                   "palette rejects duplicate stop indices");
+    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(descendingStops)); },
+                                                   "palette rejects descending stop indices");
 }
 
 void testRenderer() {
@@ -199,11 +170,5 @@ int main() {
     testRenderer();
     testViewport();
 
-    if (failureCount != 0) {
-        std::cerr << failureCount << " render test assertion(s) failed\n";
-        return 1;
-    }
-
-    std::cout << "All render tests passed\n";
-    return 0;
+    return fire_tests::reportResults("render");
 }

@@ -1,8 +1,8 @@
 #include "sim/FireSimulation.hpp"
+#include "tests_common.h"
 
 #include <cstddef>
 #include <cstdint>
-#include <exception>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -14,16 +14,7 @@ constexpr std::size_t SIMULATION_HEIGHT = 48;
 constexpr std::uint32_t RANDOM_SEED = 0x12345678u;
 constexpr int TICK_COUNT = 60;
 
-int failureCount = 0;
-
-void check(const bool condition, const std::string_view message) {
-    if (condition) {
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << '\n';
-    ++failureCount;
-}
+using fire_tests::check;
 
 void checkHash(const std::uint64_t actual, const std::uint64_t expected, const std::string_view message) {
     if (actual == expected) {
@@ -31,27 +22,13 @@ void checkHash(const std::uint64_t actual, const std::uint64_t expected, const s
     }
 
     std::cerr << "FAILED: " << message << " (expected " << expected << ", got " << actual << ")\n";
-    ++failureCount;
+    fire_tests::recordFailure();
 }
 
 template <typename ExpectedException>
 void checkInvalidDimensions(const std::size_t width, const std::size_t height, const std::string_view message) {
-    try {
-        [[maybe_unused]] const FireSimulation simulation{width, height};
-    } catch (const ExpectedException&) {
-        return;
-    } catch (const std::exception& exception) {
-        std::cerr << "FAILED: " << message << " (unexpected exception: " << exception.what() << ")\n";
-        ++failureCount;
-        return;
-    } catch (...) {
-        std::cerr << "FAILED: " << message << " (unexpected non-standard exception)\n";
-        ++failureCount;
-        return;
-    }
-
-    std::cerr << "FAILED: " << message << " (no exception)\n";
-    ++failureCount;
+    fire_tests::checkThrows<ExpectedException>(
+        [width, height] { [[maybe_unused]] const FireSimulation simulation{width, height}; }, message);
 }
 
 [[nodiscard]] std::uint64_t heatHash(const HeatFrame& heat) noexcept {
@@ -134,11 +111,5 @@ int main() {
     testParameterizedSimulationRegression();
     testResetReplaysDeterministicSequence();
 
-    if (failureCount != 0) {
-        std::cerr << failureCount << " simulation test assertion(s) failed\n";
-        return 1;
-    }
-
-    std::cout << "All simulation tests passed\n";
-    return 0;
+    return fire_tests::reportResults("simulation");
 }
