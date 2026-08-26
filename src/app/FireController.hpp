@@ -29,7 +29,7 @@ public slots:
     void setSuspended(bool suspended);
 
 signals:
-    void frameReady(FrameReport report);
+    void frameReady();
     void frameMeasured(FrameReport report);
     void wakeMeasured(std::chrono::steady_clock::time_point now);
     void parametersChanged(FireParameters parameters);

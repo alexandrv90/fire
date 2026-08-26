@@ -11,7 +11,6 @@
 #include <optional>
 
 struct FrameMetricsSnapshot {
-    bool enabled{false};
     MetricStatistics simulateDuration;
     MetricStatistics shadeDuration;
     MetricStatistics wakeInterval;

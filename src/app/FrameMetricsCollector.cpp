@@ -6,7 +6,6 @@ FrameMetricsCollector::FrameMetricsCollector(QObject* const parent) : QObject(pa
 
 FrameMetricsSnapshot FrameMetricsCollector::snapshot() const noexcept {
     return {
-        metricsEnabled,
         simulateDuration.statistics(),
         shadeDuration.statistics(),
         wakeInterval.statistics(),

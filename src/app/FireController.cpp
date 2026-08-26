@@ -41,7 +41,7 @@ void FireController::reset() {
     }
 
     emit parametersChanged(engine.parameters());
-    emit frameReady(FrameReport{});
+    emit frameReady();
 }
 
 void FireController::setParameters(const FireParameters& parameters) {
@@ -91,6 +91,6 @@ void FireController::onWake() {
         if (report.stageTimings.has_value()) {
             emit frameMeasured(report);
         }
-        emit frameReady(report);
+        emit frameReady();
     }
 }

@@ -8,6 +8,7 @@ class QPaintEvent;
 class QTimer;
 
 class StatsPanel final : public QWidget {
+    Q_OBJECT
 public:
     explicit StatsPanel(const FrameMetricsCollector& metricsCollector, QWidget* parent = nullptr);
     void setSuspended(bool suspended);

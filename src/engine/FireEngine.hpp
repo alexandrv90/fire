@@ -28,15 +28,15 @@ public:
 private:
     static constexpr int SIMULATION_WIDTH = 800;
     static constexpr int SIMULATION_HEIGHT = 600;
-    static constexpr int SIMULATION_TICKS_PER_SECOND = 60;
     static constexpr int MAXIMUM_TICKS_PER_WAKE = 3;
+    static constexpr std::chrono::duration<double> TICK_DURATION{1.0 / 60.0}; // 60Hz
 
     void simulate(int ticks) noexcept;
     void shade();
 
     FireSimulation simulation;
     FireRenderer renderer;
-    FrameClock clock{SIMULATION_TICKS_PER_SECOND, MAXIMUM_TICKS_PER_WAKE};
+    FrameClock clock{TICK_DURATION, MAXIMUM_TICKS_PER_WAKE};
     std::uint64_t frameIndex{0};
     bool stageTimingEnabled{false};
 };

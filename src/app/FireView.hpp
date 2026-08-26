@@ -12,7 +12,7 @@ class FireView final : public QWidget {
     Q_OBJECT
 
 public:
-    explicit FireView(QWidget* parent, const PixelBuffer& pixels);
+    explicit FireView(const PixelBuffer& pixels, QWidget* parent = nullptr);
 
     void present();
 

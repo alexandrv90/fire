@@ -13,7 +13,7 @@ constexpr std::size_t MAXIMUM_IMAGE_WIDTH = static_cast<std::size_t>(std::numeri
 constexpr std::size_t MAXIMUM_IMAGE_HEIGHT = static_cast<std::size_t>(std::numeric_limits<int>::max());
 } // namespace
 
-FireView::FireView(QWidget* const parent, const PixelBuffer& pixels) : QWidget(parent) {
+FireView::FireView(const PixelBuffer& pixels, QWidget* const parent) : QWidget(parent) {
     rewrap(pixels);
     setAttribute(Qt::WA_OpaquePaintEvent);
     setAutoFillBackground(false);

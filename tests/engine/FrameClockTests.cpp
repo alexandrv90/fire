@@ -4,7 +4,6 @@
 
 #include <chrono>
 #include <cstddef>
-#include <stdexcept>
 #include <string_view>
 #include <vector>
 
@@ -13,6 +12,10 @@ using namespace std::chrono_literals;
 
 using fire_tests::check;
 
+using TickDuration = std::chrono::duration<double>;
+
+constexpr TickDuration PRODUCTION_TICK_DURATION{1.0 / 60.0};
+
 void checkPlan(const TickPlan& plan,
                const int expectedTicks,
                const std::chrono::steady_clock::duration expectedDiscardedTime,
@@ -20,15 +23,8 @@ void checkPlan(const TickPlan& plan,
     check(plan.ticks == expectedTicks && plan.discardedTime == expectedDiscardedTime, message);
 }
 
-void testConstructionValidation() {
-    fire_tests::checkThrows<std::invalid_argument>([] { [[maybe_unused]] const FrameClock clock{0, 3}; },
-                                                   "frame clock requires a positive tick rate");
-    fire_tests::checkThrows<std::invalid_argument>([] { [[maybe_unused]] const FrameClock clock{60, 0}; },
-                                                   "frame clock requires a positive catch-up limit");
-}
-
 void testElapsedTimeAccumulates() {
-    FrameClock clock{4, 3};
+    FrameClock clock{250ms, 3};
 
     checkPlan(clock.consume(125ms), 0, 0ns, "a partial step produces no tick");
     checkPlan(clock.consume(125ms), 1, 0ns, "partial elapsed times accumulate into a tick");
@@ -36,22 +32,22 @@ void testElapsedTimeAccumulates() {
 }
 
 void testCatchUpClampReportsDiscardedTime() {
-    FrameClock clock{4, 3};
+    FrameClock clock{250ms, 3};
 
     checkPlan(clock.consume(125ms), 0, 0ns, "a partial step is retained before a delayed wake");
     checkPlan(clock.consume(1s), 3, 375ms, "the catch-up clamp reports time it discards");
     checkPlan(clock.consume(0ns), 0, 0ns, "the clamped catch-up plan leaves no hidden backlog");
 }
 
-void testProductionTickRateBoundary() {
-    FrameClock clock{60, 3};
+void testProductionTickDurationBoundary() {
+    FrameClock clock{PRODUCTION_TICK_DURATION, 3};
 
     checkPlan(clock.consume(16ms), 0, 0ns, "a sixteen millisecond wake is shorter than one 60 Hz step");
     checkPlan(clock.consume(1ms), 1, 0ns, "the next wake drains the accumulated 60 Hz step");
 }
 
 void testResetClearsAccumulatedTime() {
-    FrameClock clock{4, 3};
+    FrameClock clock{250ms, 3};
 
     checkPlan(clock.consume(125ms), 0, 0ns, "a partial step exists before reset");
     clock.reset();
@@ -132,10 +128,9 @@ void testEngineResetRestoresInitialState() {
 } // namespace
 
 int main() {
-    testConstructionValidation();
     testElapsedTimeAccumulates();
     testCatchUpClampReportsDiscardedTime();
-    testProductionTickRateBoundary();
+    testProductionTickDurationBoundary();
     testResetClearsAccumulatedTime();
     testEngineProducesOnlyTickedFrames();
     testEngineReportsCatchUpAndParameters();

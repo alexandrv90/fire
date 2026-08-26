@@ -9,7 +9,7 @@ struct TickPlan {
 
 class FrameClock final {
 public:
-    FrameClock(int ticksPerSecond, int maximumTicksPerWake);
+    FrameClock(std::chrono::duration<double> tickDuration, int maximumTicksPerWake);
 
     [[nodiscard]] TickPlan consume(std::chrono::steady_clock::duration elapsed) noexcept;
     void reset() noexcept;

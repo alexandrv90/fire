@@ -44,7 +44,6 @@ void testCollectorRecordsEnabledObservations() {
     collector.observePaint(start + 17ms, 7ms);
 
     const FrameMetricsSnapshot snapshot = collector.snapshot();
-    check(snapshot.enabled, "snapshot reports that collection is enabled");
     checkNear(snapshot.simulateDuration.averageMilliseconds, 3.0, "collector records simulation duration");
     checkNear(snapshot.shadeDuration.averageMilliseconds, 4.0, "collector records shade duration");
     checkNear(snapshot.wakeInterval.averageMilliseconds, 10.0, "collector records wake intervals");
@@ -67,7 +66,7 @@ void testDisabledCollectorDoesNoCollectionWork() {
     collector.observePaint(start, 4ms);
 
     const FrameMetricsSnapshot snapshot = collector.snapshot();
-    check(!snapshot.enabled, "collector starts disabled");
+    check(!collector.isEnabled(), "collector starts disabled");
     checkEmpty(snapshot.simulateDuration, "disabled collector ignores simulation observations");
     checkEmpty(snapshot.shadeDuration, "disabled collector ignores shade observations");
     checkEmpty(snapshot.wakeInterval, "disabled collector ignores wake observations");
@@ -91,7 +90,7 @@ void testEnableStartsFreshMeasurementSession() {
     collector.observeFrame(FrameReport{1, 17ms, 0ms, 2, FrameStageTimings{20ms, 30ms}});
     collector.observePaint(start + 50ms, 40ms);
     const FrameMetricsSnapshot disabledSnapshot = collector.snapshot();
-    check(!disabledSnapshot.enabled, "collector reports its disabled state");
+    check(!collector.isEnabled(), "collector reports its disabled state");
     checkNear(
         disabledSnapshot.simulateDuration.averageMilliseconds, 2.0, "disabling freezes existing simulation statistics");
     check(disabledSnapshot.latestFrame.has_value() && disabledSnapshot.latestFrame->frameIndex == 1,
@@ -99,7 +98,7 @@ void testEnableStartsFreshMeasurementSession() {
 
     collector.setEnabled(true);
     const FrameMetricsSnapshot reenabledSnapshot = collector.snapshot();
-    check(reenabledSnapshot.enabled, "collector can be re-enabled");
+    check(collector.isEnabled(), "collector can be re-enabled");
     checkEmpty(reenabledSnapshot.simulateDuration, "re-enabling starts a fresh duration window");
     checkEmpty(reenabledSnapshot.wakeInterval, "re-enabling resets wake interval history");
     checkEmpty(reenabledSnapshot.paintInterval, "re-enabling resets paint interval history");

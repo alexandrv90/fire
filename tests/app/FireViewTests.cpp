@@ -40,7 +40,7 @@ void testTracksPresentedBufferGeometry() {
     PixelBuffer buffer;
     buffer.resize(BUFFER_WIDTH, BUFFER_HEIGHT);
     fillBuffer(buffer, 0xFF204080u);
-    FireView view{nullptr, buffer};
+    FireView view{buffer};
 
     check(view.sizeHint() == QSize(static_cast<int>(BUFFER_WIDTH), static_cast<int>(BUFFER_HEIGHT)),
           "the view sizes itself to the presented buffer");
@@ -48,14 +48,14 @@ void testTracksPresentedBufferGeometry() {
           "the view accepts half the presented buffer size");
 
     const PixelBuffer emptyBuffer;
-    FireView emptyView{nullptr, emptyBuffer};
+    FireView emptyView{emptyBuffer};
     check(emptyView.sizeHint() == QSize(0, 0), "constructing with an empty buffer leaves the view without a frame");
 }
 
 void testPresentsLiveBufferContents() {
     PixelBuffer buffer;
     buffer.resize(BUFFER_WIDTH, BUFFER_HEIGHT);
-    FireView view{nullptr, buffer};
+    FireView view{buffer};
     resizeToNaturalSize(view);
 
     fillBuffer(buffer, 0xFF0000FFu);

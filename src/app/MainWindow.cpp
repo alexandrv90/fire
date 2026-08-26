@@ -29,7 +29,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     renderStack->setContentsMargins(0, 0, 0, 0);
     renderStack->setStackingMode(QStackedLayout::StackAll);
 
-    auto* const fireView = new FireView(renderArea, fireController->frame());
+    auto* const fireView = new FireView(fireController->frame(), renderArea);
     renderStack->addWidget(fireView);
 
     auto* const overlayLayer = new QWidget(renderArea);
@@ -50,29 +50,24 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     auto* const controlPanel = new ControlPanel(fireController->parameters(), centralWidget);
     windowLayout->addWidget(controlPanel);
     setCentralWidget(centralWidget);
-
+    // clang-format off
     connect(controlPanel, &ControlPanel::toggleRequested, fireController, &FireController::toggleRunning);
-    connect(
-        controlPanel, &ControlPanel::metricsEnabledChanged, frameMetricsCollector, &FrameMetricsCollector::setEnabled);
+    connect(controlPanel, &ControlPanel::metricsEnabledChanged, frameMetricsCollector, &FrameMetricsCollector::setEnabled);
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
     connect(controlPanel, &ControlPanel::parametersChanged, fireController, &FireController::setParameters);
+
     connect(fireController, &FireController::parametersChanged, controlPanel, &ControlPanel::setParameters);
     connect(fireController, &FireController::frameReady, fireView, &FireView::present);
-    connect(fireController, &FireController::runningChanged, controlPanel, [controlPanel](const bool running) {
-        controlPanel->setPaused(!running);
-    });
+    connect(fireController, &FireController::runningChanged, controlPanel,
+        [controlPanel](const bool running) {controlPanel->setPaused(!running);});
 
-    connect(frameMetricsCollector,
-            &FrameMetricsCollector::enabledChanged,
-            fireController,
-            &FireController::setMetricsEnabled);
+    connect(frameMetricsCollector, &FrameMetricsCollector::enabledChanged, fireController, &FireController::setMetricsEnabled);
     connect(frameMetricsCollector, &FrameMetricsCollector::enabledChanged, fireView, &FireView::setMetricsEnabled);
-    connect(
-        frameMetricsCollector, &FrameMetricsCollector::enabledChanged, controlPanel, &ControlPanel::setMetricsEnabled);
+    connect(frameMetricsCollector, &FrameMetricsCollector::enabledChanged, controlPanel, &ControlPanel::setMetricsEnabled);
     connect(fireController, &FireController::wakeMeasured, frameMetricsCollector, &FrameMetricsCollector::observeWake);
-    connect(
-        fireController, &FireController::frameMeasured, frameMetricsCollector, &FrameMetricsCollector::observeFrame);
+    connect(fireController, &FireController::frameMeasured, frameMetricsCollector, &FrameMetricsCollector::observeFrame);
     connect(fireView, &FireView::paintMeasured, frameMetricsCollector, &FrameMetricsCollector::observePaint);
+    // clang-format on
 
     auto* const pauseShortcut = new QShortcut(QKeySequence{Qt::Key_Space}, this);
     auto* const resetShortcut = new QShortcut(QKeySequence{Qt::Key_R}, this);
