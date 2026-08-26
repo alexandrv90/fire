@@ -27,8 +27,6 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
-    void drawFrame();
-
     QImage frame;
     bool metricsEnabled{false};
 };

@@ -44,9 +44,14 @@ ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const pare
     controlsLayout->setContentsMargins(12, 8, 12, 8);
 
     pauseButton = new QPushButton(QStringLiteral("Pause"), this);
+    metricsButton = new QPushButton(QStringLiteral("Metrics"), this);
     auto* const resetButton = new QPushButton(QStringLiteral("Reset"), this);
+    metricsButton->setObjectName(QStringLiteral("metricsButton"));
+    metricsButton->setCheckable(true);
     pauseButton->setToolTip(QStringLiteral("Pause or resume (Space)"));
+    metricsButton->setToolTip(QStringLiteral("Show or hide performance metrics"));
     resetButton->setToolTip(QStringLiteral("Restart the simulation (R)"));
+    controlsLayout->addWidget(metricsButton);
     controlsLayout->addWidget(pauseButton);
     controlsLayout->addWidget(resetButton);
     controlsLayout->addSpacing(8);
@@ -66,6 +71,7 @@ ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const pare
                               parameters.cooling());
 
     connect(pauseButton, &QPushButton::clicked, this, &ControlPanel::toggleRequested);
+    connect(metricsButton, &QPushButton::toggled, this, &ControlPanel::metricsEnabledChanged);
     connect(resetButton, &QPushButton::clicked, this, &ControlPanel::resetRequested);
     connect(
         sourceHeatSlider, &QSlider::valueChanged, this, [this] { emit parametersChanged(parametersFromControls()); });
@@ -74,6 +80,11 @@ ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const pare
 
 void ControlPanel::setPaused(const bool paused) {
     pauseButton->setText(paused ? QStringLiteral("Resume") : QStringLiteral("Pause"));
+}
+
+void ControlPanel::setMetricsEnabled(const bool enabled) {
+    const QSignalBlocker signalBlocker{metricsButton};
+    metricsButton->setChecked(enabled);
 }
 
 void ControlPanel::setParameters(FireParameters parameters) {

@@ -43,9 +43,9 @@ signals:
 private:
     TimeSeriesMetric simulateDuration;
     TimeSeriesMetric shadeDuration;
-    IntervalMetric wakeInterval;
     TimeSeriesMetric paintDuration;
     IntervalMetric paintInterval;
+    IntervalMetric wakeInterval;
     std::optional<FrameReport> latestFrame;
     bool metricsEnabled{false};
 };

@@ -1,6 +1,6 @@
 # Render Pipeline Redesign
 
-**Status:** In progress — migration steps 1–8 implemented
+**Status:** Migration complete — steps 1–9 implemented
 **Date:** 2026-08-26
 **Applies to:** the whole application; the rendering path in particular
 
@@ -450,7 +450,7 @@ panel round-trips a value it can also read back.
 | `FireController` | Qt adapter only. Owns `QTimer` and `FireEngine`; run/pause/toggle/reset; emits frame, parameter and run-state signals plus gated wake/frame measurement signals. |
 | `FireView` (was `FireWidget`) | Presentation surface only. `present(const PixelBuffer&)` copies into its own `QImage` and calls `update()`; `paintEvent` blits into `fitPreservingAspect(...)` and emits gated paint start and duration values. No metric storage, palette, conversion or simulation constants. |
 | `FrameMetricsCollector` | Application-owned event collector. Owns five private rolling channels, runtime enablement and immutable snapshots; receives observations through direct Qt signals. |
-| `ControlPanel` | Binds sliders to a `FireParameters` value; emits `parametersChanged(FireParameters)` on edits and accepts `setParameters(FireParameters)` for read-back. |
+| `ControlPanel` | Binds sliders to a `FireParameters` value and provides the run-state and metrics controls. |
 | `StatsPanel` | One fixed row per `FrameMetricsSnapshot` channel, plus the latest `FrameReport`. |
 | `MainWindow` | Wiring only. Owns the rendering-session collector, owns the simulation dimensions as the composition root and wires producers to consumers. |
 
@@ -476,7 +476,9 @@ appear as one large interval.
 
 `StatsPanel` refreshes on a timer of its own rather than on every `frameReady`. Its numbers
 are rolling statistics over the last N samples; recomputing sixty labels a second makes them
-unreadable without making them more accurate. See section 9.
+unreadable without making them more accurate. The panel is initially visible and `MainWindow`
+enables collection before starting the controller. Disabling collection hides the panel and
+stops its refresh timer. See section 9.
 
 `FireParameters` is passed by value through a signal on a direct, same-thread connection, so
 no `qRegisterMetaType` is required. If that connection ever becomes queued, it will be.
@@ -691,7 +693,3 @@ Named explicitly so they are not built speculatively:
   additional accuracy.
 - Whether `Viewport` earns its own translation unit or should stay a private helper on
   `FireView`. It is extracted here for testability; the arithmetic is small.
-- Whether `FrameReport::frameIndex` should count wakes rather than produced frames. It counts
-  produced frames, so `frameIndex` and the wake count diverge by exactly the number of
-  zero-tick wakes — which is arguably the more useful pair to display, and arguably confusing
-  in a field named "frame".

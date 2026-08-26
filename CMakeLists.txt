@@ -79,6 +79,8 @@ add_executable(classic_fire
     src/app/FireView.hpp
     src/app/MainWindow.cpp
     src/app/MainWindow.hpp
+    src/app/StatsPanel.cpp
+    src/app/StatsPanel.hpp
     src/main.cpp
 )
 
@@ -177,6 +179,26 @@ if(BUILD_TESTING)
 
     add_test(NAME fire_app_control_panel_tests COMMAND fire_app_control_panel_tests)
     set_tests_properties(fire_app_control_panel_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+    add_executable(fire_app_stats_panel_tests
+        src/app/FrameMetricsCollector.cpp
+        src/app/FrameMetricsCollector.hpp
+        src/app/StatsPanel.cpp
+        src/app/StatsPanel.hpp
+        tests/app/StatsPanelTests.cpp
+    )
+
+    target_include_directories(fire_app_stats_panel_tests PRIVATE src)
+    target_link_libraries(fire_app_stats_panel_tests PRIVATE
+        fire_engine
+        fire_metrics
+        Qt${QT_VERSION_MAJOR}::Widgets
+    )
+    fire_enable_sanitizers(fire_app_stats_panel_tests)
+    set_target_properties(fire_app_stats_panel_tests PROPERTIES AUTOMOC TRUE)
+
+    add_test(NAME fire_app_stats_panel_tests COMMAND fire_app_stats_panel_tests)
+    set_tests_properties(fire_app_stats_panel_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endif()
 
 if(MSVC)
@@ -192,6 +214,7 @@ if(MSVC)
         target_compile_options(fire_engine_tests PRIVATE /W4 /permissive-)
         target_compile_options(fire_app_metrics_tests PRIVATE /W4 /permissive-)
         target_compile_options(fire_app_control_panel_tests PRIVATE /W4 /permissive-)
+        target_compile_options(fire_app_stats_panel_tests PRIVATE /W4 /permissive-)
     endif()
 else()
     target_compile_options(fire_simulation PRIVATE -Wall -Wextra -Wpedantic)
@@ -206,5 +229,6 @@ else()
         target_compile_options(fire_engine_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(fire_app_metrics_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(fire_app_control_panel_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(fire_app_stats_panel_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 endif()

@@ -1,16 +1,16 @@
 default: run-release
 
 configure-debug:
-    cmake --fresh --preset cfg-debug
+    cmake --preset cfg-debug
 
 configure-release:
-    cmake --fresh --preset cfg-release
+    cmake --preset cfg-release
 
 configure-profile:
-    cmake --fresh --preset cfg-profile
+    cmake --preset cfg-profile
 
 configure-sanitize:
-    cmake --fresh --preset cfg-sanitize
+    cmake --preset cfg-sanitize
 
 build-debug: configure-debug
     cmake --build --preset build-debug

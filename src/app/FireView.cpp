@@ -54,21 +54,16 @@ QSize FireView::sizeHint() const { return frame.size(); }
 void FireView::paintEvent(QPaintEvent* const event) {
     Q_UNUSED(event);
 
-    if (!metricsEnabled) {
-        drawFrame();
-        return;
-    }
-
     const auto paintStartedAt = MetricsClock::now();
-    drawFrame();
-    emit paintMeasured(paintStartedAt, MetricsClock::now() - paintStartedAt);
-}
-
-void FireView::drawFrame() {
     QPainter painter(this);
     painter.fillRect(rect(), Qt::black);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
     const FitRect fitted = fitPreservingAspect(width(), height(), frame.width(), frame.height());
     painter.drawImage(QRect{fitted.x, fitted.y, fitted.width, fitted.height}, frame);
+
+    if (metricsEnabled) {
+        emit paintMeasured(paintStartedAt, MetricsClock::now() - paintStartedAt);
+        return;
+    }
 }

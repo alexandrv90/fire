@@ -38,9 +38,11 @@ void FrameMetricsCollector::clear() noexcept {
 }
 
 void FrameMetricsCollector::observeWake(const MetricsClock::time_point now) noexcept {
-    if (metricsEnabled) {
-        wakeInterval.mark(now);
+    if (!metricsEnabled) {
+        return;
     }
+
+    wakeInterval.mark(now);
 }
 
 void FrameMetricsCollector::observeFrame(FrameReport report) noexcept {

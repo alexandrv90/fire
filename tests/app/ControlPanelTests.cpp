@@ -4,6 +4,7 @@
 
 #include <QApplication>
 #include <QObject>
+#include <QPushButton>
 #include <QSlider>
 
 #include <iostream>
@@ -82,6 +83,37 @@ void testParameterValueBinding() {
     check(reportedParameters.sourceHeat() == 192 && reportedParameters.cooling() == 7,
           "editing after read-back preserves the other accepted parameter");
 }
+
+void testMetricsToggleBinding() {
+    ControlPanel panel{FireParameters{}};
+    auto* const metricsButton = panel.findChild<QPushButton*>(QStringLiteral("metricsButton"));
+    check(metricsButton != nullptr, "the panel exposes a metrics button next to its controls");
+    if (metricsButton == nullptr) {
+        return;
+    }
+
+    int changeCount = 0;
+    bool reportedEnabledState = false;
+    QObject::connect(
+        &panel, &ControlPanel::metricsEnabledChanged, [&changeCount, &reportedEnabledState](const bool enabled) {
+            ++changeCount;
+            reportedEnabledState = enabled;
+        });
+
+    panel.setMetricsEnabled(true);
+    check(metricsButton->isChecked(), "the metrics button reflects enabled collection");
+    check(changeCount == 0, "synchronizing enabled metrics does not feed back into the collector");
+
+    metricsButton->click();
+    check(changeCount == 1 && !reportedEnabledState, "clicking enabled metrics requests collection to stop");
+
+    panel.setMetricsEnabled(false);
+    check(!metricsButton->isChecked(), "the metrics button reflects disabled collection");
+    check(changeCount == 1, "synchronizing disabled metrics does not feed back into the collector");
+
+    metricsButton->click();
+    check(changeCount == 2 && reportedEnabledState, "clicking disabled metrics requests collection to start");
+}
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -89,6 +121,7 @@ int main(int argc, char* argv[]) {
     application.setQuitOnLastWindowClosed(false);
 
     testParameterValueBinding();
+    testMetricsToggleBinding();
 
     if (failureCount != 0) {
         std::cerr << failureCount << " control panel test assertion(s) failed\n";
