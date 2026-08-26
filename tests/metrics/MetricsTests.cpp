@@ -1,4 +1,6 @@
 #include "metrics/IntervalMetric.hpp"
+#include "metrics/MetricWindow.hpp"
+#include "metrics/RollingSumMetric.hpp"
 #include "tests_common.h"
 
 #include <chrono>
@@ -7,8 +9,6 @@
 
 namespace {
 using namespace std::chrono_literals;
-
-constexpr std::size_t MAXIMUM_SAMPLE_COUNT = 512;
 
 using fire_tests::check;
 using fire_tests::checkNear;
@@ -40,18 +40,38 @@ void testTimeSeriesStatistics() {
 
 void testTimeSeriesRollingWindow() {
     TimeSeriesMetric metric;
-    for (std::size_t sample = 0; sample < MAXIMUM_SAMPLE_COUNT; ++sample) {
+    for (std::size_t sample = 0; sample < METRIC_WINDOW_SAMPLE_COUNT; ++sample) {
         metric.record(1ms);
     }
     metric.record(2ms);
 
     const MetricStatistics statistics = metric.statistics();
-    check(statistics.sampleCount == MAXIMUM_SAMPLE_COUNT, "time series retains a fixed-size window");
+    check(statistics.sampleCount == METRIC_WINDOW_SAMPLE_COUNT, "time series retains a fixed-size window");
     checkNear(statistics.averageMilliseconds,
-              513.0 / static_cast<double>(MAXIMUM_SAMPLE_COUNT),
+              513.0 / static_cast<double>(METRIC_WINDOW_SAMPLE_COUNT),
               "time series evicts the oldest sample");
     checkNear(statistics.percentile95Milliseconds, 1.0, "rolling p95 uses retained samples only");
     checkNear(statistics.maximumMilliseconds, 2.0, "rolling maximum uses retained samples only");
+}
+
+void testRollingSumMetric() {
+    RollingSumMetric<MetricsClock::duration> metric;
+    for (std::size_t sample = 0; sample < METRIC_WINDOW_SAMPLE_COUNT; ++sample) {
+        metric.record(1ms);
+    }
+    metric.record(2ms);
+
+    check(metric.sampleCount() == METRIC_WINDOW_SAMPLE_COUNT, "rolling sum retains a fixed-size window");
+    check(metric.total() == 513ms, "rolling sum evicts the oldest value when adding a sample");
+
+    for (std::size_t sample = 0; sample < METRIC_WINDOW_SAMPLE_COUNT; ++sample) {
+        metric.record(1ms);
+    }
+    check(metric.total() == std::chrono::milliseconds{METRIC_WINDOW_SAMPLE_COUNT},
+          "rolling sum removes a peak after it leaves the window");
+
+    metric.clear();
+    check(metric.sampleCount() == 0 && metric.total() == MetricsClock::duration{}, "clear empties a rolling sum");
 }
 
 void testIntervalMetric() {
@@ -82,6 +102,7 @@ void testIntervalMetric() {
 int main() {
     testTimeSeriesStatistics();
     testTimeSeriesRollingWindow();
+    testRollingSumMetric();
     testIntervalMetric();
 
     return fire_tests::reportResults("metrics");

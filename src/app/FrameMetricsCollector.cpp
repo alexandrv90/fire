@@ -1,7 +1,5 @@
 #include "app/FrameMetricsCollector.hpp"
 
-#include <utility>
-
 FrameMetricsCollector::FrameMetricsCollector(QObject* const parent) : QObject(parent) {}
 
 FrameMetricsSnapshot FrameMetricsCollector::snapshot() const noexcept {
@@ -11,7 +9,13 @@ FrameMetricsSnapshot FrameMetricsCollector::snapshot() const noexcept {
         wakeInterval.statistics(),
         paintDuration.statistics(),
         paintInterval.statistics(),
-        latestFrame,
+        WakeActivityStatistics{
+            wakeElapsedTime.total(),
+            discardedTime.total(),
+            idleWakeCount.total(),
+            wakeElapsedTime.sampleCount(),
+        },
+        latestFrameIndex,
     };
 }
 
@@ -33,7 +37,10 @@ void FrameMetricsCollector::clear() noexcept {
     wakeInterval.clear();
     paintDuration.clear();
     paintInterval.clear();
-    latestFrame.reset();
+    wakeElapsedTime.clear();
+    discardedTime.clear();
+    idleWakeCount.clear();
+    latestFrameIndex = 0;
 }
 
 void FrameMetricsCollector::observeWake(const MetricsClock::time_point now) noexcept {
@@ -44,7 +51,7 @@ void FrameMetricsCollector::observeWake(const MetricsClock::time_point now) noex
     wakeInterval.mark(now);
 }
 
-void FrameMetricsCollector::observeFrame(FrameReport report) noexcept {
+void FrameMetricsCollector::observeAdvance(const FrameReport report) noexcept {
     if (!metricsEnabled) {
         return;
     }
@@ -53,7 +60,10 @@ void FrameMetricsCollector::observeFrame(FrameReport report) noexcept {
         simulateDuration.record(report.stageTimings->simulateDuration);
         shadeDuration.record(report.stageTimings->shadeDuration);
     }
-    latestFrame = std::move(report);
+    wakeElapsedTime.record(report.elapsed);
+    discardedTime.record(report.discardedTime);
+    idleWakeCount.record(report.ticksExecuted == 0 ? 1U : 0U);
+    latestFrameIndex = report.frameIndex;
 }
 
 void FrameMetricsCollector::observePaint(const MetricsClock::time_point startedAt,

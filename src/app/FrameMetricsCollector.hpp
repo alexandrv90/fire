@@ -4,11 +4,20 @@
 #include "metrics/IntervalMetric.hpp"
 #include "metrics/MetricStatistics.hpp"
 #include "metrics/MetricsClock.hpp"
+#include "metrics/RollingSumMetric.hpp"
 #include "metrics/TimeSeriesMetric.hpp"
 
 #include <QObject>
 
-#include <optional>
+#include <cstddef>
+#include <cstdint>
+
+struct WakeActivityStatistics {
+    MetricsClock::duration windowDuration{};
+    MetricsClock::duration discardedTime{};
+    std::size_t idleWakeCount{0};
+    std::size_t sampleCount{0};
+};
 
 struct FrameMetricsSnapshot {
     MetricStatistics simulateDuration;
@@ -16,7 +25,8 @@ struct FrameMetricsSnapshot {
     MetricStatistics wakeInterval;
     MetricStatistics paintDuration;
     MetricStatistics paintInterval;
-    std::optional<FrameReport> latestFrame;
+    WakeActivityStatistics wakeActivity;
+    std::uint64_t latestFrameIndex{0};
 };
 
 class FrameMetricsCollector final : public QObject {
@@ -33,7 +43,7 @@ public slots:
     void clear() noexcept;
 
     void observeWake(MetricsClock::time_point now) noexcept;
-    void observeFrame(FrameReport report) noexcept;
+    void observeAdvance(FrameReport report) noexcept;
     void observePaint(MetricsClock::time_point startedAt, MetricsClock::duration duration) noexcept;
 
 signals:
@@ -45,6 +55,9 @@ private:
     TimeSeriesMetric paintDuration;
     IntervalMetric paintInterval;
     IntervalMetric wakeInterval;
-    std::optional<FrameReport> latestFrame;
+    RollingSumMetric<MetricsClock::duration> wakeElapsedTime;
+    RollingSumMetric<MetricsClock::duration> discardedTime;
+    RollingSumMetric<std::size_t> idleWakeCount;
+    std::uint64_t latestFrameIndex{0};
     bool metricsEnabled{false};
 };

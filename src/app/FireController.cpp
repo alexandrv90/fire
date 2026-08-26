@@ -87,10 +87,10 @@ void FireController::onWake() {
     }
 
     const FrameReport report = engine.advance(elapsed);
+    if (metricsEnabled) {
+        emit advanceMeasured(report);
+    }
     if (report.ticksExecuted > 0) {
-        if (report.stageTimings.has_value()) {
-            emit frameMeasured(report);
-        }
         emit frameReady();
     }
 }

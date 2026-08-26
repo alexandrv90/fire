@@ -25,7 +25,7 @@ private:
     const FrameMetricsCollector& metricsCollector;
     QLabel* windowSummaryLabel{nullptr};
     QLabel* metricRowsLabel{nullptr};
-    QLabel* latestFrameLabel{nullptr};
+    QLabel* frameSummaryLabel{nullptr};
     QTimer* refreshTimer{nullptr};
     bool suspensionActive{false};
 };

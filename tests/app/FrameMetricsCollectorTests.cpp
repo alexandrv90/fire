@@ -1,4 +1,5 @@
 #include "app/FrameMetricsCollector.hpp"
+#include "metrics/MetricWindow.hpp"
 #include "tests_common.h"
 
 #include <QObject>
@@ -39,7 +40,8 @@ void testCollectorRecordsEnabledObservations() {
     collector.observeWake(start + 10ms);
 
     const FrameReport report{2, 20ms, 1ms, 7, FrameStageTimings{3ms, 4ms}};
-    collector.observeFrame(report);
+    collector.observeAdvance(report);
+    collector.observeAdvance(FrameReport{0, 10ms, 2ms, 7, std::nullopt});
     collector.observePaint(start + 1ms, 5ms);
     collector.observePaint(start + 17ms, 7ms);
 
@@ -52,8 +54,11 @@ void testCollectorRecordsEnabledObservations() {
     check(snapshot.paintDuration.sampleCount == 2, "collector counts paint duration samples");
     checkNear(snapshot.paintInterval.averageMilliseconds, 16.0, "collector records paint start intervals");
     check(snapshot.paintInterval.sampleCount == 1, "the first paint establishes the interval reference");
-    check(snapshot.latestFrame.has_value() && snapshot.latestFrame->frameIndex == 7,
-          "collector retains the latest measured frame report");
+    check(snapshot.wakeActivity.windowDuration == 30ms, "collector accumulates elapsed wake time");
+    check(snapshot.wakeActivity.discardedTime == 3ms, "collector accumulates discarded time");
+    check(snapshot.wakeActivity.idleWakeCount == 1, "collector counts zero-tick wakes");
+    check(snapshot.wakeActivity.sampleCount == 2, "collector counts activity samples");
+    check(snapshot.latestFrameIndex == 7, "collector retains the latest produced frame index");
 }
 
 void testDisabledCollectorDoesNoCollectionWork() {
@@ -62,7 +67,7 @@ void testDisabledCollectorDoesNoCollectionWork() {
 
     collector.observeWake(start);
     collector.observeWake(start + 10ms);
-    collector.observeFrame(FrameReport{1, 17ms, 0ms, 1, FrameStageTimings{2ms, 3ms}});
+    collector.observeAdvance(FrameReport{1, 17ms, 0ms, 1, FrameStageTimings{2ms, 3ms}});
     collector.observePaint(start, 4ms);
 
     const FrameMetricsSnapshot snapshot = collector.snapshot();
@@ -72,7 +77,8 @@ void testDisabledCollectorDoesNoCollectionWork() {
     checkEmpty(snapshot.wakeInterval, "disabled collector ignores wake observations");
     checkEmpty(snapshot.paintDuration, "disabled collector ignores paint observations");
     checkEmpty(snapshot.paintInterval, "disabled collector ignores paint interval observations");
-    check(!snapshot.latestFrame.has_value(), "disabled collector retains no frame report");
+    check(snapshot.wakeActivity.sampleCount == 0, "disabled collector retains no wake activity");
+    check(snapshot.latestFrameIndex == 0, "disabled collector retains no frame index");
 }
 
 void testEnableStartsFreshMeasurementSession() {
@@ -82,19 +88,18 @@ void testEnableStartsFreshMeasurementSession() {
     collector.setEnabled(true);
     collector.observeWake(start);
     collector.observeWake(start + 5ms);
-    collector.observeFrame(FrameReport{1, 17ms, 0ms, 1, FrameStageTimings{2ms, 3ms}});
+    collector.observeAdvance(FrameReport{1, 17ms, 0ms, 1, FrameStageTimings{2ms, 3ms}});
     collector.observePaint(start, 4ms);
     collector.setEnabled(false);
 
     collector.observeWake(start + 50ms);
-    collector.observeFrame(FrameReport{1, 17ms, 0ms, 2, FrameStageTimings{20ms, 30ms}});
+    collector.observeAdvance(FrameReport{1, 17ms, 0ms, 2, FrameStageTimings{20ms, 30ms}});
     collector.observePaint(start + 50ms, 40ms);
     const FrameMetricsSnapshot disabledSnapshot = collector.snapshot();
     check(!collector.isEnabled(), "collector reports its disabled state");
     checkNear(
         disabledSnapshot.simulateDuration.averageMilliseconds, 2.0, "disabling freezes existing simulation statistics");
-    check(disabledSnapshot.latestFrame.has_value() && disabledSnapshot.latestFrame->frameIndex == 1,
-          "disabled observations do not replace the latest frame");
+    check(disabledSnapshot.latestFrameIndex == 1, "disabled observations do not replace the latest frame index");
 
     collector.setEnabled(true);
     const FrameMetricsSnapshot reenabledSnapshot = collector.snapshot();
@@ -102,7 +107,26 @@ void testEnableStartsFreshMeasurementSession() {
     checkEmpty(reenabledSnapshot.simulateDuration, "re-enabling starts a fresh duration window");
     checkEmpty(reenabledSnapshot.wakeInterval, "re-enabling resets wake interval history");
     checkEmpty(reenabledSnapshot.paintInterval, "re-enabling resets paint interval history");
-    check(!reenabledSnapshot.latestFrame.has_value(), "re-enabling clears the previous frame report");
+    check(reenabledSnapshot.wakeActivity.sampleCount == 0, "re-enabling clears wake activity");
+    check(reenabledSnapshot.latestFrameIndex == 0, "re-enabling clears the previous frame index");
+}
+
+void testWakeActivityUsesRollingWindow() {
+    FrameMetricsCollector collector;
+    collector.setEnabled(true);
+    collector.observeAdvance(FrameReport{0, 16ms, 5ms, 0, std::nullopt});
+
+    for (std::size_t sample = 0; sample < METRIC_WINDOW_SAMPLE_COUNT; ++sample) {
+        collector.observeAdvance(FrameReport{1, 16ms, 0ms, sample + 1, std::nullopt});
+    }
+
+    const WakeActivityStatistics activity = collector.snapshot().wakeActivity;
+    check(activity.windowDuration == std::chrono::milliseconds{16 * METRIC_WINDOW_SAMPLE_COUNT},
+          "wake activity retains elapsed time for the rolling window");
+    check(activity.discardedTime == MetricsClock::duration{},
+          "discarded time leaves the total when its sample is evicted");
+    check(activity.idleWakeCount == 0, "idle wakes leave the total when their samples are evicted");
+    check(activity.sampleCount == METRIC_WINDOW_SAMPLE_COUNT, "wake activity retains a fixed-size window");
 }
 } // namespace
 
@@ -110,6 +134,7 @@ int main() {
     testCollectorRecordsEnabledObservations();
     testDisabledCollectorDoesNoCollectionWork();
     testEnableStartsFreshMeasurementSession();
+    testWakeActivityUsesRollingWindow();
 
     return fire_tests::reportResults("frame metrics collector");
 }

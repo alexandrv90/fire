@@ -24,7 +24,7 @@ MetricStatistics TimeSeriesMetric::statistics() const noexcept {
         return {};
     }
 
-    std::array<MetricsClock::duration, MAXIMUM_SAMPLE_COUNT> sortedSamples{};
+    std::array<MetricsClock::duration, METRIC_WINDOW_SAMPLE_COUNT> sortedSamples{};
     double totalMilliseconds = 0.0;
     for (std::size_t index = 0; index < sampleCount; ++index) {
         sortedSamples[index] = samples[index];

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "metrics/MetricStatistics.hpp"
+#include "metrics/MetricWindow.hpp"
 #include "metrics/MetricsClock.hpp"
 
 #include <array>
@@ -14,9 +15,7 @@ public:
     [[nodiscard]] MetricStatistics statistics() const noexcept;
 
 private:
-    static constexpr std::size_t MAXIMUM_SAMPLE_COUNT = 512;
-
-    std::array<MetricsClock::duration, MAXIMUM_SAMPLE_COUNT> samples{};
+    std::array<MetricsClock::duration, METRIC_WINDOW_SAMPLE_COUNT> samples{};
     std::size_t nextSample{0};
     std::size_t sampleCount{0};
 };

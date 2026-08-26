@@ -30,7 +30,7 @@ public slots:
 
 signals:
     void frameReady();
-    void frameMeasured(FrameReport report);
+    void advanceMeasured(FrameReport report);
     void wakeMeasured(std::chrono::steady_clock::time_point now);
     void parametersChanged(FireParameters parameters);
     void runningChanged(bool running);

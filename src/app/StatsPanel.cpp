@@ -29,12 +29,15 @@ QString formatMetricRow(const QString& name, const MetricStatistics& statistics)
         .arg(formatMetricValue(statistics.maximumMilliseconds, statistics.sampleCount), 8);
 }
 
-QString formatWindowSummary(const MetricStatistics& wakeInterval) {
-    const double windowSeconds =
-        wakeInterval.averageMilliseconds * static_cast<double>(wakeInterval.sampleCount) / 1000.0;
+QString formatWindowSummary(const WakeActivityStatistics& wakeActivity) {
+    const double windowSeconds = std::chrono::duration<double>{wakeActivity.windowDuration}.count();
     return QStringLiteral("Window %1 s | %2 samples")
         .arg(windowSeconds, 0, 'f', 2)
-        .arg(static_cast<qulonglong>(wakeInterval.sampleCount));
+        .arg(static_cast<qulonglong>(wakeActivity.sampleCount));
+}
+
+double milliseconds(const MetricsClock::duration duration) noexcept {
+    return std::chrono::duration<double, std::milli>{duration}.count();
 }
 } // namespace
 
@@ -68,14 +71,14 @@ StatsPanel::StatsPanel(const FrameMetricsCollector& metricsCollector, QWidget* c
     metricRowsLabel->setFont(fixedFont);
     metricRowsLabel->setTextFormat(Qt::PlainText);
 
-    latestFrameLabel = new QLabel(this);
-    latestFrameLabel->setObjectName(QStringLiteral("latestFrameLabel"));
-    latestFrameLabel->setFont(fixedFont);
-    latestFrameLabel->setTextFormat(Qt::PlainText);
+    frameSummaryLabel = new QLabel(this);
+    frameSummaryLabel->setObjectName(QStringLiteral("frameSummaryLabel"));
+    frameSummaryLabel->setFont(fixedFont);
+    frameSummaryLabel->setTextFormat(Qt::PlainText);
 
     panelLayout->addWidget(windowSummaryLabel);
     panelLayout->addWidget(metricRowsLabel);
-    panelLayout->addWidget(latestFrameLabel);
+    panelLayout->addWidget(frameSummaryLabel);
 
     refreshTimer = new QTimer(this);
     refreshTimer->setObjectName(QStringLiteral("statsRefreshTimer"));
@@ -107,7 +110,7 @@ void StatsPanel::paintEvent(QPaintEvent* const event) {
 
 void StatsPanel::refresh() {
     const FrameMetricsSnapshot snapshot = metricsCollector.snapshot();
-    windowSummaryLabel->setText(formatWindowSummary(snapshot.wakeInterval));
+    windowSummaryLabel->setText(formatWindowSummary(snapshot.wakeActivity));
 
     QStringList metricRows;
     metricRows.reserve(6);
@@ -123,13 +126,13 @@ void StatsPanel::refresh() {
     metricRows.append(formatMetricRow(QStringLiteral("Wake interval"), snapshot.wakeInterval));
     metricRowsLabel->setText(metricRows.join(QLatin1Char('\n')));
 
-    if (!snapshot.latestFrame.has_value()) {
-        latestFrameLabel->setText(QStringLiteral("Frame --"));
-        return;
-    }
-
-    const FrameReport& frame = *snapshot.latestFrame;
-    latestFrameLabel->setText(QStringLiteral("Frame %1").arg(static_cast<qulonglong>(frame.frameIndex)));
+    const QString frameIndex = snapshot.wakeActivity.sampleCount == 0
+                                   ? QStringLiteral("--")
+                                   : QString::number(static_cast<qulonglong>(snapshot.latestFrameIndex));
+    frameSummaryLabel->setText(QStringLiteral("Frame %1 | Dropped %2 ms | Idle wakes %3")
+                                   .arg(frameIndex)
+                                   .arg(milliseconds(snapshot.wakeActivity.discardedTime), 0, 'f', 2)
+                                   .arg(static_cast<qulonglong>(snapshot.wakeActivity.idleWakeCount)));
 }
 
 void StatsPanel::updateRefreshTimer() {

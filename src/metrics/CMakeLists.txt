@@ -3,7 +3,9 @@ fire_add_library(fire_metrics
         IntervalMetric.cpp
         IntervalMetric.hpp
         MetricStatistics.hpp
+        MetricWindow.hpp
         MetricsClock.hpp
+        RollingSumMetric.hpp
         TimeSeriesMetric.cpp
         TimeSeriesMetric.hpp
 )

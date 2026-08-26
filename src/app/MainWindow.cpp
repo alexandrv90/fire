@@ -65,7 +65,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(frameMetricsCollector, &FrameMetricsCollector::enabledChanged, fireView, &FireView::setMetricsEnabled);
     connect(frameMetricsCollector, &FrameMetricsCollector::enabledChanged, controlPanel, &ControlPanel::setMetricsEnabled);
     connect(fireController, &FireController::wakeMeasured, frameMetricsCollector, &FrameMetricsCollector::observeWake);
-    connect(fireController, &FireController::frameMeasured, frameMetricsCollector, &FrameMetricsCollector::observeFrame);
+    connect(fireController, &FireController::advanceMeasured, frameMetricsCollector, &FrameMetricsCollector::observeAdvance);
     connect(fireView, &FireView::paintMeasured, frameMetricsCollector, &FrameMetricsCollector::observePaint);
     // clang-format on
 

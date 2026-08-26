@@ -24,7 +24,8 @@ void testInitialSnapshotPresentation() {
     const auto start = MetricsClock::time_point{};
     collector.observeWake(start);
     collector.observeWake(start + 10ms);
-    collector.observeFrame(FrameReport{2, 20ms, 1ms, 7, FrameStageTimings{3ms, 4ms}});
+    collector.observeAdvance(FrameReport{2, 20ms, 1ms, 7, FrameStageTimings{3ms, 4ms}});
+    collector.observeAdvance(FrameReport{0, 10ms, 2ms, 7, std::nullopt});
     collector.observePaint(start + 1ms, 5ms);
     collector.observePaint(start + 17ms, 7ms);
 
@@ -41,16 +42,16 @@ void testInitialSnapshotPresentation() {
 
     const auto* const windowSummaryLabel = panel.findChild<QLabel*>(QStringLiteral("windowSummaryLabel"));
     const auto* const metricRowsLabel = panel.findChild<QLabel*>(QStringLiteral("metricRowsLabel"));
-    const auto* const latestFrameLabel = panel.findChild<QLabel*>(QStringLiteral("latestFrameLabel"));
+    const auto* const frameSummaryLabel = panel.findChild<QLabel*>(QStringLiteral("frameSummaryLabel"));
     check(windowSummaryLabel != nullptr, "the stats panel exposes its rolling window summary");
     check(metricRowsLabel != nullptr, "the stats panel exposes fixed metric rows");
-    check(latestFrameLabel != nullptr, "the stats panel exposes the latest frame report");
-    if (windowSummaryLabel == nullptr || metricRowsLabel == nullptr || latestFrameLabel == nullptr) {
+    check(frameSummaryLabel != nullptr, "the stats panel exposes frame activity");
+    if (windowSummaryLabel == nullptr || metricRowsLabel == nullptr || frameSummaryLabel == nullptr) {
         return;
     }
 
-    check(windowSummaryLabel->text() == QStringLiteral("Window 0.01 s | 1 samples"),
-          "the first row reports the retained wake window and sample count");
+    check(windowSummaryLabel->text() == QStringLiteral("Window 0.03 s | 2 samples"),
+          "the first row reports the activity window and sample count");
 
     const QString rows = metricRowsLabel->text();
     check(!rows.section(QLatin1Char('\n'), 0, 0).contains(QLatin1Char('n')),
@@ -66,8 +67,8 @@ void testInitialSnapshotPresentation() {
     check(rows.contains(QStringLiteral("Paint interval")) && rows.contains(QStringLiteral("16.00")),
           "the paint interval row displays its statistics");
 
-    const QString latestFrame = latestFrameLabel->text();
-    check(latestFrame.contains(QStringLiteral("Frame 7")), "the panel displays the produced frame index");
+    check(frameSummaryLabel->text() == QStringLiteral("Frame 7 | Dropped 3.00 ms | Idle wakes 1"),
+          "the final row displays frame count and accumulated wake activity");
 }
 
 void testDisabledCollectionHidesPanel() {
