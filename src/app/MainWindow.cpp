@@ -10,8 +10,6 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
-#include <cstdint>
-
 MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     setWindowTitle(QStringLiteral("Fire Demo"));
 
@@ -32,16 +30,8 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
 
     connect(controlPanel, &ControlPanel::toggleRequested, fireController, &FireController::toggleRunning);
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
-    connect(controlPanel, &ControlPanel::sourceHeatChanged, fireController, [fireController](const int sourceHeat) {
-        FireParameters parameters = fireController->parameters();
-        parameters.setSourceHeat(static_cast<std::uint8_t>(sourceHeat));
-        fireController->setParameters(parameters);
-    });
-    connect(controlPanel, &ControlPanel::coolingChanged, fireController, [fireController](const int cooling) {
-        FireParameters parameters = fireController->parameters();
-        parameters.setCooling(static_cast<std::uint8_t>(cooling));
-        fireController->setParameters(parameters);
-    });
+    connect(controlPanel, &ControlPanel::parametersChanged, fireController, &FireController::setParameters);
+    connect(fireController, &FireController::parametersChanged, controlPanel, &ControlPanel::setParameters);
     connect(fireController, &FireController::frameReady, fireView, [fireController, fireView](const FrameReport&) {
         fireView->present(fireController->frame());
     });

@@ -1,9 +1,11 @@
 #pragma once
 
+#include "sim/FireParameters.hpp"
+
 #include <QWidget>
 
-class FireParameters;
 class QPushButton;
+class QSlider;
 
 class ControlPanel final : public QWidget {
     Q_OBJECT
@@ -13,12 +15,18 @@ public:
 
     void setPaused(bool paused);
 
+public slots:
+    void setParameters(FireParameters parameters);
+
 signals:
     void toggleRequested();
     void resetRequested();
-    void sourceHeatChanged(int sourceHeat);
-    void coolingChanged(int cooling);
+    void parametersChanged(FireParameters parameters);
 
 private:
+    [[nodiscard]] FireParameters parametersFromControls() const noexcept;
+
     QPushButton* pauseButton{nullptr};
+    QSlider* sourceHeatSlider{nullptr};
+    QSlider* coolingSlider{nullptr};
 };

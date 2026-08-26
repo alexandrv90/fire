@@ -1,6 +1,6 @@
 # Render Pipeline Redesign
 
-**Status:** In progress — migration steps 1–7 implemented
+**Status:** In progress — migration steps 1–8 implemented
 **Date:** 2026-08-26
 **Applies to:** the whole application; the rendering path in particular
 

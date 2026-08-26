@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QSlider>
 
 namespace {
@@ -50,26 +51,40 @@ ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const pare
     controlsLayout->addWidget(resetButton);
     controlsLayout->addSpacing(8);
 
-    auto* const sourceHeatSlider = addSlider(*controlsLayout,
-                                             this,
-                                             QStringLiteral("Heat"),
-                                             FireParameters::MINIMUM_SOURCE_HEAT,
-                                             FireParameters::MAXIMUM_SOURCE_HEAT,
-                                             parameters.sourceHeat());
+    sourceHeatSlider = addSlider(*controlsLayout,
+                                 this,
+                                 QStringLiteral("Heat"),
+                                 FireParameters::MINIMUM_SOURCE_HEAT,
+                                 FireParameters::MAXIMUM_SOURCE_HEAT,
+                                 parameters.sourceHeat());
     controlsLayout->addSpacing(8);
-    auto* const coolingSlider = addSlider(*controlsLayout,
-                                          this,
-                                          QStringLiteral("Cooling"),
-                                          FireParameters::MINIMUM_COOLING,
-                                          FireParameters::MAXIMUM_COOLING,
-                                          parameters.cooling());
+    coolingSlider = addSlider(*controlsLayout,
+                              this,
+                              QStringLiteral("Cooling"),
+                              FireParameters::MINIMUM_COOLING,
+                              FireParameters::MAXIMUM_COOLING,
+                              parameters.cooling());
 
     connect(pauseButton, &QPushButton::clicked, this, &ControlPanel::toggleRequested);
     connect(resetButton, &QPushButton::clicked, this, &ControlPanel::resetRequested);
-    connect(sourceHeatSlider, &QSlider::valueChanged, this, &ControlPanel::sourceHeatChanged);
-    connect(coolingSlider, &QSlider::valueChanged, this, &ControlPanel::coolingChanged);
+    connect(
+        sourceHeatSlider, &QSlider::valueChanged, this, [this] { emit parametersChanged(parametersFromControls()); });
+    connect(coolingSlider, &QSlider::valueChanged, this, [this] { emit parametersChanged(parametersFromControls()); });
 }
 
 void ControlPanel::setPaused(const bool paused) {
     pauseButton->setText(paused ? QStringLiteral("Resume") : QStringLiteral("Pause"));
+}
+
+void ControlPanel::setParameters(FireParameters parameters) {
+    const QSignalBlocker signalBlocker{this};
+    sourceHeatSlider->setValue(parameters.sourceHeat());
+    coolingSlider->setValue(parameters.cooling());
+}
+
+FireParameters ControlPanel::parametersFromControls() const noexcept {
+    FireParameters parameters;
+    parameters.setSourceHeat(static_cast<std::uint8_t>(sourceHeatSlider->value()));
+    parameters.setCooling(static_cast<std::uint8_t>(coolingSlider->value()));
+    return parameters;
 }
