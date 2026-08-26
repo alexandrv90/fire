@@ -104,6 +104,36 @@ void testDisabledCollectionHidesPanel() {
     check(panel.isHidden(), "disabling collection hides the stats panel");
     check(!refreshTimer->isActive(), "disabling collection stops stats refreshes");
 }
+
+void testSuspensionStopsRefreshesWithoutChangingEnablement() {
+    FrameMetricsCollector collector;
+    collector.setEnabled(true);
+    QWidget renderOverlay;
+    StatsPanel panel{collector, &renderOverlay};
+
+    auto* const refreshTimer = panel.findChild<QTimer*>(QStringLiteral("statsRefreshTimer"));
+    if (refreshTimer == nullptr) {
+        check(false, "the stats panel owns its refresh timer");
+        return;
+    }
+
+    panel.setSuspended(true);
+    check(collector.isEnabled(), "suspending stats preserves metrics enablement");
+    check(!panel.isHidden(), "suspending stats preserves panel visibility preference");
+    check(!refreshTimer->isActive(), "suspending stats stops refreshes");
+
+    collector.setEnabled(false);
+    collector.setEnabled(true);
+    check(!refreshTimer->isActive(), "enabling metrics while suspended does not start refreshes");
+
+    panel.setSuspended(false);
+    check(refreshTimer->isActive(), "restoring an enabled stats panel restarts refreshes");
+
+    collector.setEnabled(false);
+    panel.setSuspended(true);
+    panel.setSuspended(false);
+    check(!refreshTimer->isActive(), "restoring a disabled stats panel leaves refreshes stopped");
+}
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -112,6 +142,7 @@ int main(int argc, char* argv[]) {
 
     testInitialSnapshotPresentation();
     testDisabledCollectionHidesPanel();
+    testSuspensionStopsRefreshesWithoutChangingEnablement();
 
     if (failureCount != 0) {
         std::cerr << failureCount << " stats panel test assertion(s) failed\n";

@@ -7,26 +7,27 @@ FireController::FireController(QObject* const parent) : QObject(parent) {
 }
 
 void FireController::run() {
-    if (isRunning()) {
+    if (isRunRequested()) {
         return;
     }
 
-    lastWake = Clock::now();
-    wakeTimer.start();
+    runRequested = true;
+    updateWakeTimer();
     emit runningChanged(true);
 }
 
 void FireController::pause() {
-    if (!isRunning()) {
+    if (!isRunRequested()) {
         return;
     }
 
-    wakeTimer.stop();
+    runRequested = false;
+    updateWakeTimer();
     emit runningChanged(false);
 }
 
 void FireController::toggleRunning() {
-    if (isRunning()) {
+    if (isRunRequested()) {
         pause();
     } else {
         run();
@@ -51,6 +52,30 @@ void FireController::setParameters(const FireParameters& parameters) {
 void FireController::setMetricsEnabled(const bool enabled) noexcept {
     metricsEnabled = enabled;
     engine.setStageTimingEnabled(enabled);
+}
+
+void FireController::setSuspended(const bool suspended) {
+    if (suspensionActive == suspended) {
+        return;
+    }
+
+    suspensionActive = suspended;
+    updateWakeTimer();
+}
+
+void FireController::updateWakeTimer() {
+    const bool shouldAdvance = runRequested && !suspensionActive;
+    if (shouldAdvance == isRunning()) {
+        return;
+    }
+
+    if (!shouldAdvance) {
+        wakeTimer.stop();
+        return;
+    }
+
+    lastWake = Clock::now();
+    wakeTimer.start();
 }
 
 void FireController::onWake() {

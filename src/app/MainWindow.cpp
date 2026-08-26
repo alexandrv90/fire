@@ -6,6 +6,7 @@
 #include "app/FrameMetricsCollector.hpp"
 #include "app/StatsPanel.hpp"
 
+#include <QEvent>
 #include <QKeySequence>
 #include <QShortcut>
 #include <QStackedLayout>
@@ -21,7 +22,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     windowLayout->setSpacing(0);
 
     auto* const frameMetricsCollector = new FrameMetricsCollector(this);
-    auto* const fireController = new FireController(this);
+    fireController = new FireController(this);
 
     auto* const renderArea = new QWidget(centralWidget);
     auto* const renderStack = new QStackedLayout(renderArea);
@@ -39,7 +40,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     overlayLayout->setContentsMargins(12, 12, 12, 12);
     overlayLayout->setSpacing(0);
 
-    auto* const statsPanel = new StatsPanel(*frameMetricsCollector, overlayLayer);
+    statsPanel = new StatsPanel(*frameMetricsCollector, overlayLayer);
     overlayLayout->addWidget(statsPanel, 0, Qt::AlignLeft | Qt::AlignTop);
     overlayLayout->addStretch(1);
     renderStack->addWidget(overlayLayer);
@@ -57,7 +58,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
     connect(controlPanel, &ControlPanel::parametersChanged, fireController, &FireController::setParameters);
     connect(fireController, &FireController::parametersChanged, controlPanel, &ControlPanel::setParameters);
-    connect(fireController, &FireController::frameReady, fireView, [fireController, fireView](const FrameReport&) {
+    connect(fireController, &FireController::frameReady, fireView, [this, fireView](const FrameReport&) {
         fireView->present(fireController->frame());
     });
     connect(fireController, &FireController::runningChanged, controlPanel, [controlPanel](const bool running) {
@@ -86,4 +87,15 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     frameMetricsCollector->setEnabled(true);
     fireController->run();
     resize(960, 720);
+}
+
+void MainWindow::changeEvent(QEvent* const event) {
+    QMainWindow::changeEvent(event);
+    if (event->type() != QEvent::WindowStateChange) {
+        return;
+    }
+
+    const bool suspended = isMinimized();
+    fireController->setSuspended(suspended);
+    statsPanel->setSuspended(suspended);
 }

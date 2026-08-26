@@ -77,21 +77,25 @@ StatsPanel::StatsPanel(const FrameMetricsCollector& metricsCollector, QWidget* c
     panelLayout->addWidget(metricRowsLabel);
     panelLayout->addWidget(latestFrameLabel);
 
-    auto* const refreshTimer = new QTimer(this);
+    refreshTimer = new QTimer(this);
     refreshTimer->setObjectName(QStringLiteral("statsRefreshTimer"));
     refreshTimer->setInterval(REFRESH_INTERVAL_MILLISECONDS);
     connect(refreshTimer, &QTimer::timeout, this, &StatsPanel::refresh);
-    const auto applyEnabledState = [this, refreshTimer](const bool enabled) {
-        if (enabled) {
-            refresh();
-            refreshTimer->start();
-        } else {
-            refreshTimer->stop();
-        }
+    const auto applyEnabledState = [this](const bool enabled) {
         setVisible(enabled);
+        updateRefreshTimer();
     };
     connect(&metricsCollector, &FrameMetricsCollector::enabledChanged, this, applyEnabledState);
     applyEnabledState(metricsCollector.isEnabled());
+}
+
+void StatsPanel::setSuspended(const bool suspended) {
+    if (suspensionActive == suspended) {
+        return;
+    }
+
+    suspensionActive = suspended;
+    updateRefreshTimer();
 }
 
 void StatsPanel::paintEvent(QPaintEvent* const event) {
@@ -126,4 +130,15 @@ void StatsPanel::refresh() {
 
     const FrameReport& frame = *snapshot.latestFrame;
     latestFrameLabel->setText(QStringLiteral("Frame %1").arg(static_cast<qulonglong>(frame.frameIndex)));
+}
+
+void StatsPanel::updateRefreshTimer() {
+    const bool shouldRefresh = metricsCollector.isEnabled() && !suspensionActive;
+    if (!shouldRefresh) {
+        refreshTimer->stop();
+        return;
+    }
+
+    refresh();
+    refreshTimer->start();
 }

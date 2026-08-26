@@ -14,6 +14,8 @@ public:
     explicit FireController(QObject* parent = nullptr);
 
     [[nodiscard]] bool isRunning() const noexcept { return wakeTimer.isActive(); }
+    [[nodiscard]] bool isRunRequested() const noexcept { return runRequested; }
+    [[nodiscard]] bool isSuspended() const noexcept { return suspensionActive; }
     [[nodiscard]] const PixelBuffer& frame() const noexcept { return engine.frame(); }
     [[nodiscard]] const FireParameters& parameters() const noexcept { return engine.parameters(); }
 
@@ -24,6 +26,7 @@ public slots:
     void reset();
     void setParameters(const FireParameters& parameters);
     void setMetricsEnabled(bool enabled) noexcept;
+    void setSuspended(bool suspended);
 
 signals:
     void frameReady(FrameReport report);
@@ -40,8 +43,12 @@ private:
 
     static constexpr int WAKE_INTERVAL_MILLISECONDS = 16;
 
+    void updateWakeTimer();
+
     FireEngine engine;
     QTimer wakeTimer;
     Clock::time_point lastWake;
     bool metricsEnabled{false};
+    bool runRequested{false};
+    bool suspensionActive{false};
 };
