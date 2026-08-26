@@ -1,50 +1,49 @@
 #include "app/FireView.hpp"
 
-#include "render/Viewport.hpp"
+#include "Utils.hpp"
 
 #include <QPaintEvent>
 #include <QPainter>
 
-#include <cassert>
 #include <cstddef>
-#include <cstring>
 #include <limits>
 
-FireView::FireView(QWidget* const parent) : QWidget(parent) {
+namespace {
+constexpr std::size_t MAXIMUM_IMAGE_WIDTH = static_cast<std::size_t>(std::numeric_limits<int>::max()) / sizeof(Rgba32);
+constexpr std::size_t MAXIMUM_IMAGE_HEIGHT = static_cast<std::size_t>(std::numeric_limits<int>::max());
+} // namespace
+
+FireView::FireView(QWidget* const parent, const PixelBuffer& pixels) : QWidget(parent) {
+    rewrap(pixels);
     setAttribute(Qt::WA_OpaquePaintEvent);
     setAutoFillBackground(false);
     setFocusPolicy(Qt::StrongFocus);
 }
 
-void FireView::present(const PixelBuffer& pixels) {
-    constexpr auto MAXIMUM_IMAGE_DIMENSION = static_cast<std::size_t>(std::numeric_limits<int>::max());
-    assert(pixels.width() <= MAXIMUM_IMAGE_DIMENSION && pixels.height() <= MAXIMUM_IMAGE_DIMENSION);
-    if (pixels.width() == 0 || pixels.height() == 0 || pixels.width() > MAXIMUM_IMAGE_DIMENSION ||
-        pixels.height() > MAXIMUM_IMAGE_DIMENSION) {
+void FireView::present() { update(); }
+
+void FireView::rewrap(const PixelBuffer& pixels) {
+    wrappedData = pixels.data();
+    wrappedWidth = pixels.width();
+    wrappedHeight = pixels.height();
+
+    if (wrappedWidth == 0 || wrappedHeight == 0 || wrappedWidth > MAXIMUM_IMAGE_WIDTH ||
+        wrappedHeight > MAXIMUM_IMAGE_HEIGHT) {
         frame = {};
         updateGeometry();
-        update();
         return;
     }
 
-    const auto frameWidth = static_cast<int>(pixels.width());
-    const auto frameHeight = static_cast<int>(pixels.height());
-    if (frame.width() != frameWidth || frame.height() != frameHeight) {
-        frame = QImage(frameWidth, frameHeight, QImage::Format_RGB32);
-        updateGeometry();
-        if (frame.isNull()) {
-            update();
-            return;
-        }
-    }
-
-    const std::size_t rowByteCount = pixels.width() * sizeof(Rgba32);
-    for (std::size_t y = 0; y < pixels.height(); ++y) {
-        const Rgba32* const source = pixels.data() + y * pixels.width();
-        std::memcpy(frame.scanLine(static_cast<int>(y)), source, rowByteCount);
-    }
-
-    update();
+    // Rgba32 and QRgb share the 0xAARRGGBB word layout, so the buffer needs no
+    // conversion. The const overload yields a read-only image: painting reads it
+    // without ever detaching, which would silently deep-copy the aliased storage.
+    static_assert(sizeof(Rgba32) == sizeof(QRgb));
+    frame = QImage(reinterpret_cast<const uchar*>(wrappedData),
+                   static_cast<int>(wrappedWidth),
+                   static_cast<int>(wrappedHeight),
+                   static_cast<int>(wrappedWidth * sizeof(Rgba32)),
+                   QImage::Format_RGB32);
+    updateGeometry();
 }
 
 QSize FireView::minimumSizeHint() const { return frame.size() / 2; }
@@ -64,6 +63,5 @@ void FireView::paintEvent(QPaintEvent* const event) {
 
     if (metricsEnabled) {
         emit paintMeasured(paintStartedAt, MetricsClock::now() - paintStartedAt);
-        return;
     }
 }

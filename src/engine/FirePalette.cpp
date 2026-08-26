@@ -1,4 +1,4 @@
-#include "render/FirePalette.hpp"
+#include "engine/FirePalette.hpp"
 
 #include <array>
 #include <cstddef>

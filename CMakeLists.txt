@@ -6,7 +6,6 @@ include(CTest)
 include(cmake/FireTargets.cmake)
 
 add_subdirectory(src/sim)
-add_subdirectory(src/render)
 add_subdirectory(src/metrics)
 add_subdirectory(src/engine)
 add_subdirectory(src/app)

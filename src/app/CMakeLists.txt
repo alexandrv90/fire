@@ -19,6 +19,7 @@ fire_add_library(fire_app
         MainWindow.hpp
         StatsPanel.cpp
         StatsPanel.hpp
+        Utils.hpp
     PUBLIC_DEPENDENCIES
         fire_engine
         fire_metrics
@@ -73,6 +74,15 @@ fire_add_test(fire_app_control_panel_tests
 fire_add_test(fire_app_stats_panel_tests
     SOURCES
         "${PROJECT_SOURCE_DIR}/tests/app/StatsPanelTests.cpp"
+    DEPENDENCIES
+        fire_app
+    ENVIRONMENT
+        QT_QPA_PLATFORM=offscreen
+)
+
+fire_add_test(fire_app_view_tests
+    SOURCES
+        "${PROJECT_SOURCE_DIR}/tests/app/FireViewTests.cpp"
     DEPENDENCIES
         fire_app
     ENVIRONMENT

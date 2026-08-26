@@ -2,17 +2,29 @@ fire_add_library(fire_engine
     SOURCES
         FireEngine.cpp
         FireEngine.hpp
+        FirePalette.cpp
+        FirePalette.hpp
+        FireRenderer.cpp
+        FireRenderer.hpp
         FrameClock.cpp
         FrameClock.hpp
         FrameReport.hpp
+        PixelBuffer.cpp
+        PixelBuffer.hpp
     PUBLIC_DEPENDENCIES
         fire_simulation
-        fire_render
 )
 
-fire_add_test(fire_engine_tests
+fire_add_test(fire_engine_clock_tests
     SOURCES
         "${PROJECT_SOURCE_DIR}/tests/engine/FrameClockTests.cpp"
+    DEPENDENCIES
+        fire_engine
+)
+
+fire_add_test(fire_engine_renderer_tests
+    SOURCES
+        "${PROJECT_SOURCE_DIR}/tests/engine/RenderTests.cpp"
     DEPENDENCIES
         fire_engine
 )

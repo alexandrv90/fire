@@ -1,7 +1,7 @@
 #pragma once
 
-#include "render/FirePalette.hpp"
-#include "render/PixelBuffer.hpp"
+#include "engine/FirePalette.hpp"
+#include "engine/PixelBuffer.hpp"
 #include "sim/HeatFrame.hpp"
 
 class FireRenderer final {

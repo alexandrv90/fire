@@ -1,18 +1,20 @@
 #pragma once
 
+#include "engine/PixelBuffer.hpp"
 #include "metrics/MetricsClock.hpp"
-#include "render/PixelBuffer.hpp"
 
 #include <QImage>
 #include <QWidget>
+
+#include <cstddef>
 
 class FireView final : public QWidget {
     Q_OBJECT
 
 public:
-    explicit FireView(QWidget* parent = nullptr);
+    explicit FireView(QWidget* parent, const PixelBuffer& pixels);
 
-    void present(const PixelBuffer& pixels);
+    void present();
 
     [[nodiscard]] QSize minimumSizeHint() const override;
     [[nodiscard]] QSize sizeHint() const override;
@@ -27,6 +29,11 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    void rewrap(const PixelBuffer& pixels);
+
     QImage frame;
+    const Rgba32* wrappedData{nullptr};
+    std::size_t wrappedWidth{0};
+    std::size_t wrappedHeight{0};
     bool metricsEnabled{false};
 };

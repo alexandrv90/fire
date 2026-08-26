@@ -29,8 +29,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     renderStack->setContentsMargins(0, 0, 0, 0);
     renderStack->setStackingMode(QStackedLayout::StackAll);
 
-    auto* const fireView = new FireView(renderArea);
-    fireView->present(fireController->frame());
+    auto* const fireView = new FireView(renderArea, fireController->frame());
     renderStack->addWidget(fireView);
 
     auto* const overlayLayer = new QWidget(renderArea);
@@ -58,9 +57,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
     connect(controlPanel, &ControlPanel::parametersChanged, fireController, &FireController::setParameters);
     connect(fireController, &FireController::parametersChanged, controlPanel, &ControlPanel::setParameters);
-    connect(fireController, &FireController::frameReady, fireView, [this, fireView](const FrameReport&) {
-        fireView->present(fireController->frame());
-    });
+    connect(fireController, &FireController::frameReady, fireView, &FireView::present);
     connect(fireController, &FireController::runningChanged, controlPanel, [controlPanel](const bool running) {
         controlPanel->setPaused(!running);
     });

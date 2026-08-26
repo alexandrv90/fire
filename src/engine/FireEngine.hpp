@@ -1,8 +1,8 @@
 #pragma once
 
+#include "engine/FireRenderer.hpp"
 #include "engine/FrameClock.hpp"
 #include "engine/FrameReport.hpp"
-#include "render/FireRenderer.hpp"
 #include "sim/FireParameters.hpp"
 #include "sim/FireSimulation.hpp"
 
@@ -12,7 +12,8 @@
 
 class FireEngine final {
 public:
-    FireEngine(std::size_t simulationWidth = SIMULATION_WIDTH, std::size_t simulationHeight = SIMULATION_HEIGHT);
+    explicit FireEngine(std::size_t simulationWidth = SIMULATION_WIDTH,
+                        std::size_t simulationHeight = SIMULATION_HEIGHT);
 
     [[nodiscard]] FrameReport advance(std::chrono::steady_clock::duration elapsed);
     void reset() noexcept;

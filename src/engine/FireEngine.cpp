@@ -1,6 +1,6 @@
 #include "engine/FireEngine.hpp"
 
-#include "render/FirePalette.hpp"
+#include "engine/FirePalette.hpp"
 
 FireEngine::FireEngine(const std::size_t simulationWidth, const std::size_t simulationHeight)
     : simulation(simulationWidth, simulationHeight), renderer(FirePalette::classic()) {
