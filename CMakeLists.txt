@@ -40,13 +40,10 @@ target_link_libraries(fire_render PUBLIC fire_simulation)
 fire_enable_sanitizers(fire_render)
 
 add_library(fire_metrics
-    src/metrics/FrameProfiler.cpp
-    src/metrics/FrameProfiler.hpp
     src/metrics/IntervalMetric.cpp
     src/metrics/IntervalMetric.hpp
     src/metrics/MetricStatistics.hpp
-    src/metrics/ScopedTimer.cpp
-    src/metrics/ScopedTimer.hpp
+    src/metrics/MetricsClock.hpp
     src/metrics/TimeSeriesMetric.cpp
     src/metrics/TimeSeriesMetric.hpp
 )
@@ -68,7 +65,6 @@ target_compile_features(fire_engine PUBLIC cxx_std_20)
 target_link_libraries(fire_engine PUBLIC
     fire_simulation
     fire_render
-    fire_metrics
 )
 fire_enable_sanitizers(fire_engine)
 
@@ -77,6 +73,8 @@ add_executable(classic_fire
     src/app/ControlPanel.hpp
     src/app/FireController.cpp
     src/app/FireController.hpp
+    src/app/FrameMetricsCollector.cpp
+    src/app/FrameMetricsCollector.hpp
     src/app/FireView.cpp
     src/app/FireView.hpp
     src/app/MainWindow.cpp
@@ -145,6 +143,23 @@ if(BUILD_TESTING)
     fire_enable_sanitizers(fire_engine_tests)
 
     add_test(NAME fire_engine_tests COMMAND fire_engine_tests)
+
+    add_executable(fire_app_metrics_tests
+        src/app/FrameMetricsCollector.cpp
+        src/app/FrameMetricsCollector.hpp
+        tests/app/FrameMetricsCollectorTests.cpp
+    )
+
+    target_include_directories(fire_app_metrics_tests PRIVATE src)
+    target_link_libraries(fire_app_metrics_tests PRIVATE
+        fire_engine
+        fire_metrics
+        Qt${QT_VERSION_MAJOR}::Widgets
+    )
+    fire_enable_sanitizers(fire_app_metrics_tests)
+    set_target_properties(fire_app_metrics_tests PROPERTIES AUTOMOC TRUE)
+
+    add_test(NAME fire_app_metrics_tests COMMAND fire_app_metrics_tests)
 endif()
 
 if(MSVC)
@@ -158,6 +173,7 @@ if(MSVC)
         target_compile_options(fire_simulation_tests PRIVATE /W4 /permissive-)
         target_compile_options(fire_render_tests PRIVATE /W4 /permissive-)
         target_compile_options(fire_engine_tests PRIVATE /W4 /permissive-)
+        target_compile_options(fire_app_metrics_tests PRIVATE /W4 /permissive-)
     endif()
 else()
     target_compile_options(fire_simulation PRIVATE -Wall -Wextra -Wpedantic)
@@ -170,5 +186,6 @@ else()
         target_compile_options(fire_simulation_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(fire_render_tests PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(fire_engine_tests PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(fire_app_metrics_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 endif()

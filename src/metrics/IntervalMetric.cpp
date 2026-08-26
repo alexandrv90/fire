@@ -1,6 +1,6 @@
 #include "metrics/IntervalMetric.hpp"
 
-void IntervalMetric::mark(const Clock::time_point now) noexcept {
+void IntervalMetric::mark(const MetricsClock::time_point now) noexcept {
     if (hasPreviousMark) {
         intervals.record(now - previousMark);
     }

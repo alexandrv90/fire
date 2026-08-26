@@ -3,6 +3,7 @@
 #include "app/ControlPanel.hpp"
 #include "app/FireController.hpp"
 #include "app/FireView.hpp"
+#include "app/FrameMetricsCollector.hpp"
 
 #include <QKeySequence>
 #include <QShortcut>
@@ -19,8 +20,9 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     windowLayout->setContentsMargins(0, 0, 0, 0);
     windowLayout->setSpacing(0);
 
+    auto* const frameMetricsCollector = new FrameMetricsCollector(this);
     auto* const fireController = new FireController(SIMULATION_WIDTH, SIMULATION_HEIGHT, this);
-    auto* const fireView = new FireView(fireController->profiler().presentInterval, centralWidget);
+    auto* const fireView = new FireView(centralWidget);
     fireView->present(fireController->frame());
     windowLayout->addWidget(fireView, 1);
 
@@ -47,6 +49,16 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
         controlPanel->setPaused(!running);
     });
 
+    connect(frameMetricsCollector,
+            &FrameMetricsCollector::enabledChanged,
+            fireController,
+            &FireController::setMetricsEnabled);
+    connect(frameMetricsCollector, &FrameMetricsCollector::enabledChanged, fireView, &FireView::setMetricsEnabled);
+    connect(fireController, &FireController::wakeMeasured, frameMetricsCollector, &FrameMetricsCollector::observeWake);
+    connect(
+        fireController, &FireController::frameMeasured, frameMetricsCollector, &FrameMetricsCollector::observeFrame);
+    connect(fireView, &FireView::paintMeasured, frameMetricsCollector, &FrameMetricsCollector::observePaint);
+
     auto* const pauseShortcut = new QShortcut(QKeySequence{Qt::Key_Space}, this);
     auto* const resetShortcut = new QShortcut(QKeySequence{Qt::Key_R}, this);
     auto* const quitShortcut = new QShortcut(QKeySequence{Qt::Key_Escape}, this);
@@ -54,6 +66,7 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
     connect(resetShortcut, &QShortcut::activated, fireController, &FireController::reset);
     connect(quitShortcut, &QShortcut::activated, this, &QWidget::close);
 
+    frameMetricsCollector->setEnabled(true);
     fireController->run();
     resize(960, 720);
 }

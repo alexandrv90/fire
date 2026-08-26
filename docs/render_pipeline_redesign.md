@@ -1,7 +1,7 @@
 # Render Pipeline Redesign
 
-**Status:** Proposed — not yet implemented
-**Date:** 2026-08-25
+**Status:** In progress — migration steps 1–7 implemented
+**Date:** 2026-08-26
 **Applies to:** the whole application; the rendering path in particular
 
 This document proposes a decomposition that separates the frame loop, the simulation, the
@@ -56,7 +56,7 @@ the producer rather than subscribing to it.
 ```
 +-- app/ ------------------- Qt lives only here ---------------------+
 |   MainWindow . FireController . ControlPanel . FireView            |
-|   StatsPanel                                                       |
+|   FrameMetricsCollector . StatsPanel                               |
 +---------------------------------+----------------------------------+
                                   | drives
 +-- engine/ ----------------------v-- pure C++: the frame loop ------+
@@ -69,13 +69,13 @@ the producer rather than subscribing to it.
 +----------------------------------+  +------------------------------+
 
 +-- metrics/ ------- pure C++, no dependencies ----------------------+
-|   TimeSeriesMetric . IntervalMetric . ScopedTimer . FrameProfiler  |
+|   MetricsClock . TimeSeriesMetric . IntervalMetric . Statistics   |
 +--------------------------------------------------------------------+
 ```
 
-**Dependency rule:** `app -> engine -> {sim, render, metrics}`, and `render -> sim` (the
-renderer consumes `HeatFrame`). `sim` and `render` depend on nothing. Only the executable
-links Qt.
+**Dependency rule:** `app -> {engine, metrics}`, `engine -> {sim, render}`, and
+`render -> sim` (the renderer consumes `HeatFrame`). `sim` and `metrics` depend on nothing.
+Only the executable links Qt.
 
 CMake targets:
 
@@ -84,11 +84,12 @@ CMake targets:
 | `fire_metrics` | — | no |
 | `fire_simulation` | — | no |
 | `fire_render` | `fire_simulation` | no |
-| `fire_engine` | `fire_simulation`, `fire_render`, `fire_metrics` | no |
+| `fire_engine` | `fire_simulation`, `fire_render` | no |
 | `classic_fire` | `fire_engine`, `fire_metrics`, `Qt::Widgets` | yes |
 
-`fire_render` deliberately does not link `fire_metrics`: shading is timed by the engine at
-the call site, so the renderer stays free of instrumentation concerns.
+`FireEngine` returns optional raw stage durations in `FrameReport`; aggregation belongs to
+the application-owned `FrameMetricsCollector`. Consequently neither `fire_engine` nor
+`fire_render` links `fire_metrics`.
 
 ### Enforcement, stated honestly
 
@@ -108,7 +109,7 @@ QTimer wake (approximately 16 ms)
   |
   v FireController::onWake()
     elapsed = Clock::now() - lastWake
-    profiler.wakeInterval.mark(now)
+    if metrics enabled: emit wakeMeasured(now)
   |
   v FireEngine::advance(elapsed) ---------------------> FrameReport
       |
@@ -116,20 +117,24 @@ QTimer wake (approximately 16 ms)
       |
       +-- if plan.ticks == 0: return report unshaded
       |
-      +-- [Simulate]  N x FireSimulation::tick()          <-- ScopedTimer
+      +-- [Simulate]  N x FireSimulation::tick()          <-- optionally timed
       |
       +-- [Extract]   HeatFrame frame = simulation.heat()
       |
-      +-- [Shade]     FireRenderer::render(frame)         <-- ScopedTimer
+      +-- [Shade]     FireRenderer::render(frame)         <-- optionally timed
+  |
+  +-- if report.stageTimings: emit frameMeasured(FrameReport)
   |
   v if report.ticksExecuted > 0: emit frameReady(FrameReport)
       |
       +--> FireView::present(engine.frame())
       |      copy PixelBuffer into the view's own QImage -> update()
-      |      paintEvent: fillRect + drawImage(fitPreservingAspect(...))
-      |                  profiler.presentInterval.mark(now)
+      |      paintEvent: [Paint] QPainter construction through destruction
+      |                  if metrics enabled: emit paintMeasured(startedAt, duration)
       |
-      +--> StatsPanel::update(engine.profiler(), report)   (throttled, see 9)
+      +--> FrameMetricsCollector receives wakeMeasured, frameMeasured and paintMeasured
+             |
+             +--> StatsPanel reads snapshot()             (throttled, see 9)
 ```
 
 **Zero-tick wakes are not shaded.** A 16 ms wake against a 16.667 ms step means roughly one
@@ -139,17 +144,22 @@ not exist. The current code carries this guard as `if (ticksExecuted > 0)` in
 `FireController::advanceFrame`; the redesign keeps it, moved into the engine where the
 decision is made.
 
-Two timed **stages**, both inside `FireEngine::advance`: **Simulate** and **Shade**. Extract
-is a view construction and costs nothing worth measuring.
+Three timed **durations**: **Simulate** and **Shade**, optionally measured inside
+`FireEngine::advance`, and **Paint**, measured by `FireView` from immediately before
+`QPainter` construction through immediately after its destruction. Extract is a view
+construction and costs nothing worth measuring. The `PixelBuffer`-to-`QImage` copy remains
+unmeasured because it is expected to be negligible at the current frame size.
 
-Two timed **intervals**: **wake interval**, recorded by `FireController`, and **present
-interval**, paint to paint, recorded by `FireView`.
+Two timed **intervals**: **wake interval**, wake start to wake start, and **paint interval**,
+`paintEvent` start to `paintEvent` start. `FrameMetricsCollector` records both from timestamps
+carried by producer signals.
 
 The distinction between the two kinds is the point. Stage durations answer "is a frame
 expensive?"; intervals answer "do frames arrive evenly?", which is what a viewer actually
 perceives. A pipeline whose stages sum to three milliseconds can still judder, and only the
 interval metrics show it — durations alone would make the panel look healthy while the fire
-stutters. Given that this redesign deliberately does not change pacing (decision 6.6), the
+stutters. Paint duration distinguishes expensive Qt scaling and blitting from irregular paint
+scheduling. Given that this redesign deliberately does not change pacing (decision 6.6), the
 interval metrics are the ones that make the carried-over behaviour visible.
 
 ---
@@ -182,6 +192,8 @@ and no consumer re-checks the agreement.
 ### 4.2 `metrics/` — new, Qt-free
 
 ```cpp
+using MetricsClock = std::chrono::steady_clock;
+
 struct MetricStatistics {
     double averageMilliseconds{0.0};
     double percentile95Milliseconds{0.0};
@@ -193,9 +205,7 @@ struct MetricStatistics {
 // about what it measures: callers name a channel by choosing which instance to write to.
 class TimeSeriesMetric final {
 public:
-    using Clock = std::chrono::steady_clock;
-
-    void record(Clock::duration duration) noexcept;
+    void record(MetricsClock::duration duration) noexcept;
     void clear() noexcept;
 
     [[nodiscard]] MetricStatistics statistics() const noexcept;
@@ -206,55 +216,34 @@ public:
 // records no sample.
 class IntervalMetric final {
 public:
-    using Clock = std::chrono::steady_clock;
-
-    void mark(Clock::time_point now) noexcept;
+    void mark(MetricsClock::time_point now) noexcept;
     void clear() noexcept;
 
     [[nodiscard]] MetricStatistics statistics() const noexcept;
 };
 
-// Times the enclosing scope and records on destruction. Declaring one before other scoped
-// resources measures their teardown too, because they are destroyed first.
-class ScopedTimer final {
-public:
-    explicit ScopedTimer(TimeSeriesMetric& metric) noexcept;
-    ~ScopedTimer() noexcept;
-
-    ScopedTimer(const ScopedTimer&) = delete;
-    ScopedTimer& operator=(const ScopedTimer&) = delete;
-};
-
-// The fixed set of channels this application measures, named in section 3. An aggregate,
-// not a registry: it owns the metrics and imposes no policy on them.
-struct FrameProfiler final {
-    TimeSeriesMetric simulate;
-    TimeSeriesMetric shade;
-    IntervalMetric wakeInterval;
-    IntervalMetric presentInterval;
-
-    void clear() noexcept;
-};
 ```
 
 Both metric types record into a fixed-size ring buffer, so recording never allocates.
 `statistics()` computes on demand and returns a value, so reading does not allocate either.
+They remain generic storage types; they do not name application channels or own enablement
+policy.
 
-**Why named members rather than a registration table.** A registration API — `registerChannel`
-returning an opaque `MetricHandle`, plus a `ProfileSnapshot` of `{name, statistics}` rows that
-`StatsPanel` iterates generically — was considered and rejected. Its argument was that a new
-stage should produce a new panel row with no UI change. That is the same speculative-extension
-argument rejected for `RenderPass` in decision 6.1, and it is no stronger here: there are four
-channels, they are enumerated in section 3, and no fifth is planned. Accepting the abstraction
-here after rejecting it there would be inconsistent.
+`MetricsClock` centralizes the monotonic clock used by metric storage and application-side
+measurement producers. Frame pacing remains independently expressed with
+`std::chrono::steady_clock` in `engine/`; the alias does not create an engine-to-metrics
+dependency.
 
-Named members also remove three concrete costs: a strong-index handle type that exists only to
-avoid string lookup, a `snapshot()` that allocates a vector on a path read every frame, and an
-unenforceable "the name must have static storage duration" precondition living in a comment.
+The application-specific channels are private members of `FrameMetricsCollector`: simulate
+duration, shade duration, wake interval, paint duration and paint interval. Readers receive a
+fixed `FrameMetricsSnapshot` value. A registration table was considered and rejected because
+there are five known channels and no runtime registration requirement; a fixed snapshot is
+allocation-free and makes the display contract explicit.
 
-**Cost of the decision:** adding a channel means editing `FrameProfiler` and `StatsPanel`
-together. At this size that is a two-line change, but the second line is the one the compiler
-does not force — a new channel can be recorded and silently never displayed.
+The collector is application-owned rather than global. A singleton would make call sites
+shorter but would introduce hidden mutable state, merge independent engine sessions and make
+tests depend on global resets. `MainWindow` owns one collector for the rendering session and
+wires producers to it with direct Qt signals.
 
 **Counters are not included.** A `CounterMetric` (total ticks, frames that discarded time) was
 specified in an earlier draft with no consumer. By the standard applied above it should not
@@ -368,17 +357,22 @@ fact instead of a silent local adjustment.
 ```cpp
 // engine/FrameReport.hpp
 
+struct FrameStageTimings {
+    std::chrono::steady_clock::duration simulateDuration{};
+    std::chrono::steady_clock::duration shadeDuration{};
+};
+
 struct FrameReport {
     int ticksExecuted{0};                                  // zero: nothing simulated, nothing shaded
     std::chrono::steady_clock::duration elapsed{};         // wall time this wake accounted for
     std::chrono::steady_clock::duration discardedTime{};   // non-zero: could not keep up
     std::uint64_t frameIndex{0};
+    std::optional<FrameStageTimings> stageTimings;          // absent: collection disabled or no frame
 };
 
 // engine/FireEngine.hpp
 
-// The frame loop and the owner of every long-lived pure-C++ resource. This is where the
-// profiler lives, so no measurement concern is threaded through Qt constructors.
+// The frame loop and the owner of the long-lived pure-C++ simulation and rendering resources.
 class FireEngine final {
 public:
     FireEngine(std::size_t simulationWidth, std::size_t simulationHeight);
@@ -391,15 +385,14 @@ public:
     [[nodiscard]] const FireParameters& parameters() const noexcept;
     void setParameters(const FireParameters& parameters) noexcept;
 
-    [[nodiscard]] FrameProfiler& profiler() noexcept;
-    [[nodiscard]] const FrameProfiler& profiler() const noexcept;
+    void setStageTimingEnabled(bool enabled) noexcept;
 
 private:
     FireSimulation simulation;
     FireRenderer renderer;
     FrameClock clock;
-    FrameProfiler frameProfiler;
     std::uint64_t frameIndex{0};
+    bool stageTimingEnabled{false};
 };
 ```
 
@@ -411,21 +404,25 @@ FrameReport FireEngine::advance(const std::chrono::steady_clock::duration elapse
     if (plan.ticks == 0) {
         // Heat is unchanged, so shading would reproduce the existing pixels exactly. The
         // frame index does not advance: no frame was produced.
-        return FrameReport{0, elapsed, plan.discardedTime, frameIndex};
+        return FrameReport{0, elapsed, plan.discardedTime, frameIndex, std::nullopt};
     }
 
-    {
-        const ScopedTimer timer{frameProfiler.simulate};
-        for (int tick = 0; tick < plan.ticks; ++tick) {
-            simulation.tick();
-        }
-    }
-    {
-        const ScopedTimer timer{frameProfiler.shade};
-        renderer.render(simulation.heat());
+    std::optional<FrameStageTimings> stageTimings;
+    if (stageTimingEnabled) {
+        const auto simulateStartedAt = std::chrono::steady_clock::now();
+        simulate(plan.ticks);
+        const auto simulateDuration = std::chrono::steady_clock::now() - simulateStartedAt;
+
+        const auto shadeStartedAt = std::chrono::steady_clock::now();
+        shade();
+        const auto shadeDuration = std::chrono::steady_clock::now() - shadeStartedAt;
+        stageTimings = FrameStageTimings{simulateDuration, shadeDuration};
+    } else {
+        simulate(plan.ticks);
+        shade();
     }
 
-    return FrameReport{plan.ticks, elapsed, plan.discardedTime, ++frameIndex};
+    return FrameReport{plan.ticks, elapsed, plan.discardedTime, ++frameIndex, stageTimings};
 }
 ```
 
@@ -437,6 +434,11 @@ decision 6.6 explains why the wakes that trigger it still exist.
 assert on `frame()` and the reports. A zero-tick advance is directly assertable — feed it an
 elapsed shorter than one step and require that `frame()` is untouched.
 
+The engine remains Qt-free: it returns optional raw `std::chrono` durations rather than
+emitting signals or writing into application-owned storage. When timing is disabled it takes
+no profiling timestamps. The unavoidable runtime-switching overhead is one predictable
+boolean branch.
+
 `setParameters` taking a whole `FireParameters` value — rather than one setter per field —
 resolves problems 5 and 6 together: two engine entry points regardless of knob count, and the
 panel round-trips a value it can also read back.
@@ -445,11 +447,12 @@ panel round-trips a value it can also read back.
 
 | Class | Responsibility |
 |-------|----------------|
-| `FireController` | Qt adapter only. Owns `QTimer` and `FireEngine`; run/pause/toggle/reset; marks the wake interval; emits `frameReady(FrameReport)`, `parametersChanged(FireParameters)` and `runningChanged(bool)`. |
-| `FireView` (was `FireWidget`) | Presentation surface only. `present(const PixelBuffer&)` copies into its own `QImage` and calls `update()`; `paintEvent` blits into `fitPreservingAspect(...)` and marks the present interval. No palette, no conversion, no simulation constants. |
+| `FireController` | Qt adapter only. Owns `QTimer` and `FireEngine`; run/pause/toggle/reset; emits frame, parameter and run-state signals plus gated wake/frame measurement signals. |
+| `FireView` (was `FireWidget`) | Presentation surface only. `present(const PixelBuffer&)` copies into its own `QImage` and calls `update()`; `paintEvent` blits into `fitPreservingAspect(...)` and emits gated paint start and duration values. No metric storage, palette, conversion or simulation constants. |
+| `FrameMetricsCollector` | Application-owned event collector. Owns five private rolling channels, runtime enablement and immutable snapshots; receives observations through direct Qt signals. |
 | `ControlPanel` | Binds sliders to a `FireParameters` value; emits `parametersChanged(FireParameters)` on edits and accepts `setParameters(FireParameters)` for read-back. |
-| `StatsPanel` | One fixed row per `FrameProfiler` channel, plus the latest `FrameReport`. |
-| `MainWindow` | Wiring only. Owns the simulation dimensions as the composition root and hands them to `FireEngine` alone; the view derives its geometry from the buffers it receives. |
+| `StatsPanel` | One fixed row per `FrameMetricsSnapshot` channel, plus the latest `FrameReport`. |
+| `MainWindow` | Wiring only. Owns the rendering-session collector, owns the simulation dimensions as the composition root and wires producers to consumers. |
 
 **Parameter binding terminates by signal blocking, not by comparison.** The panel emits
 `parametersChanged` on a user edit; `FireController` calls `FireEngine::setParameters` and
@@ -460,9 +463,16 @@ cannot be the loop breaker. `ControlPanel::setParameters` blocks its own widget 
 the duration of the update instead. The same path carries parameter changes originating
 elsewhere, such as `reset`, which is what keeps the sliders from going stale.
 
-`FireView` takes a single `IntervalMetric&` for the present interval. This is the only place a
-metrics type crosses into a widget constructor, and it is deliberately the narrowest possible
-dependency: "mark the time here", not "here is a monitor that knows every stage".
+`FireView` receives no metric-storage dependency. When collection is enabled it measures from
+immediately before `QPainter` construction until immediately after destruction and emits the
+raw start time and duration. `FrameMetricsCollector` derives `paintInterval` from successive
+start times and records `paintDuration` separately.
+
+`FrameMetricsCollector::enabledChanged(bool)` is connected to both producers. Disabled mode
+takes no profiling-only clock readings, emits no measurement signals, writes no samples and
+performs no statistics work. A runtime switch necessarily retains a boolean branch at each
+instrumentation site. Re-enabling starts a fresh measurement session so disabled time cannot
+appear as one large interval.
 
 `StatsPanel` refreshes on a timer of its own rather than on every `frameReady`. Its numbers
 are rolling statistics over the last N samples; recomputing sixty labels a second makes them
@@ -519,8 +529,8 @@ Recorded so they are not silently re-litigated.
 A pass interface with a linear pipeline was considered and rejected. Its main argument was
 that self-identifying stages let the pipeline register profiler channels automatically, so
 instrumentation is not hand-written at each site. That argument dissolves once `FireEngine`
-exists: the engine is a single orchestration point that runs every stage, so two explicit
-`ScopedTimer` scopes in one function give the same property without a vtable, an owned
+exists: the engine is a single orchestration point that runs every pure-C++ stage, so two
+explicit timing boundaries in one function give the same property without a vtable, an owned
 `vector<unique_ptr<RenderPass>>`, or a per-frame context struct.
 
 Runtime pass ordering and polymorphic extension were the other arguments, and both are
@@ -528,7 +538,7 @@ speculative — there is exactly one pass.
 
 **Cost of the decision:** adding a post-process effect later means editing
 `FireRenderer::render` rather than adding one registration line; per-effect timing needs a
-second `ScopedTimer` inside `render()`.
+second explicit timing boundary inside `render()`.
 
 **Why it is safe:** nothing outside `render/` can observe the difference. `FireEngine` calls
 `renderer.render(heat)` and `FireView` receives a `const PixelBuffer&` under either design,
@@ -594,6 +604,20 @@ None of these are introduced by this redesign and none are fixed by it. `FrameCl
 a future pacing change lands: it already returns `discardedTime`, and decision 6.4 records
 where an interpolation alpha would go.
 
+### 6.7 Application-owned metrics collector rather than a singleton — accepted
+
+The five metrics span three producers: engine stages, timer wakes and widget paints. Owning
+their storage inside `FireEngine` misstates that scope and forces mutable metric objects
+through `FireController` into `FireView`. A process-wide singleton removes constructor
+parameters but replaces them with hidden mutable state, merges independent sessions and makes
+tests responsible for global cleanup.
+
+`MainWindow` therefore owns one `FrameMetricsCollector` for the rendering session. Qt-facing
+producers send raw observations through direct signals; the Qt-free engine places optional raw
+stage durations in `FrameReport`. The collector alone owns rolling storage and enablement
+policy. Producers suppress timing and measurement signals while disabled, so the off path has
+no measurement work beyond its required branch.
+
 ---
 
 ## 7. Migration plan
@@ -615,10 +639,13 @@ Each step builds, ships, and leaves the application working.
    `fire_render` and keeps only presentation, including the copy at `present`. Resolves
    problem 3.
 6. **`FrameClock` plus tests.** `FireController` loses the accumulator. Resolves problem 2.
-7. **`FireEngine`.** `FireController` loses everything else and becomes a Qt adapter.
-   Resolves problems 1 and 5.
+7. **`FireEngine` and `FrameMetricsCollector`.** `FireController` loses everything else and
+   becomes a Qt adapter. The application-owned collector receives gated wake, stage and paint
+   observations; `paintDuration` is restored and `paintInterval` names paint cadence
+   accurately. Resolves problems 1 and 5.
 8. **`ControlPanel` binds a `FireParameters` value.** Resolves problem 6.
-9. **`StatsPanel`.** The feature that motivated the redesign; by this point it is additive.
+9. **`StatsPanel`.** The feature that motivated the redesign; by this point it is an additive
+   reader of `FrameMetricsCollector::snapshot()`.
 
 Step 1 comes first specifically because it is the only pure addition and it delivers the test
 target that every later step depends on. Step 2 comes second because a behaviour-preserving
@@ -656,9 +683,9 @@ Named explicitly so they are not built speculatively:
 ## 9. Open questions
 
 - Whether `StatsPanel` should also display counters — total ticks, frames that discarded
-  time, frames skipped for zero ticks. `FrameProfiler` would gain a named `CounterMetric`
-  member per counter, on the same terms as its timing channels. None is specified until one
-  has a consumer.
+  time, frames skipped for zero ticks. `FrameMetricsCollector` would gain a private counter
+  per displayed value and expose it through `FrameMetricsSnapshot`. None is specified until
+  one has a consumer.
 - (Decided, 4Hz) What `StatsPanel`'s refresh rate should be. Roughly 4 Hz is assumed in sections 3 and 4.5.
   The underlying numbers are rolling statistics, so a faster refresh trades legibility for no
   additional accuracy.

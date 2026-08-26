@@ -105,18 +105,24 @@ void testEngineProducesOnlyTickedFrames() {
     check(idleReport.elapsed == 16ms, "an engine report retains its elapsed wall time");
     check(idleReport.discardedTime == 0ns, "an ordinary engine wake discards no time");
     check(idleReport.frameIndex == 0, "a zero-tick wake does not advance the frame index");
+    check(!idleReport.stageTimings.has_value(), "a zero-tick wake reports no stage timings");
     check(engine.frame().data() == initialStorage && copyPixels(engine.frame()) == initialPixels,
           "a zero-tick wake leaves the rendered frame untouched");
-    check(engine.profiler().simulate.statistics().sampleCount == 0, "a zero-tick wake records no simulation duration");
-    check(engine.profiler().shade.statistics().sampleCount == 0, "a zero-tick wake records no shade duration");
 
+    engine.setStageTimingEnabled(true);
     const FrameReport frameReport = engine.advance(1ms);
     check(frameReport.ticksExecuted == 1, "accumulated engine time executes a simulation tick");
     check(frameReport.frameIndex == 1, "a produced frame advances the frame index");
+    check(frameReport.stageTimings.has_value(), "an enabled engine reports produced-frame stage timings");
+    check(frameReport.stageTimings->simulateDuration >= 0ns, "engine reports a non-negative simulation duration");
+    check(frameReport.stageTimings->shadeDuration >= 0ns, "engine reports a non-negative shade duration");
     check(engine.frame().data() == initialStorage, "engine rendering reuses its pixel storage");
     check(copyPixels(engine.frame()) != initialPixels, "a ticked engine shades the updated simulation");
-    check(engine.profiler().simulate.statistics().sampleCount == 1, "a produced frame records one simulation duration");
-    check(engine.profiler().shade.statistics().sampleCount == 1, "a produced frame records one shade duration");
+
+    engine.setStageTimingEnabled(false);
+    const FrameReport unmeasuredReport = engine.advance(17ms);
+    check(unmeasuredReport.ticksExecuted == 1 && !unmeasuredReport.stageTimings.has_value(),
+          "a disabled engine produces frames without measuring stage timings");
 }
 
 void testEngineReportsCatchUpAndParameters() {
@@ -139,26 +145,19 @@ void testEngineResetRestoresInitialState() {
     FireEngine engine{8, 6};
     const std::vector<Rgba32> initialPixels = copyPixels(engine.frame());
 
+    engine.setStageTimingEnabled(true);
     static_cast<void>(engine.advance(16ms));
     static_cast<void>(engine.advance(1ms));
-    const auto intervalStart = IntervalMetric::Clock::now();
-    engine.profiler().wakeInterval.mark(intervalStart);
-    engine.profiler().wakeInterval.mark(intervalStart + 1ms);
-    engine.profiler().presentInterval.mark(intervalStart);
-    engine.profiler().presentInterval.mark(intervalStart + 1ms);
     engine.reset();
 
     check(copyPixels(engine.frame()) == initialPixels, "engine reset restores the initial rendered frame");
-    check(engine.profiler().simulate.statistics().sampleCount == 0 &&
-              engine.profiler().shade.statistics().sampleCount == 0,
-          "engine reset clears stage metrics");
-    check(engine.profiler().wakeInterval.statistics().sampleCount == 0 &&
-              engine.profiler().presentInterval.statistics().sampleCount == 0,
-          "engine reset clears interval metrics");
-
-    const FrameReport report = engine.advance(1ms);
-    check(report.ticksExecuted == 0 && report.frameIndex == 0,
+    const FrameReport idleReport = engine.advance(1ms);
+    check(idleReport.ticksExecuted == 0 && idleReport.frameIndex == 0,
           "engine reset clears accumulated time and restarts frame indexing");
+
+    const FrameReport frameReport = engine.advance(16ms);
+    check(frameReport.ticksExecuted == 1 && frameReport.frameIndex == 1, "engine produces frames normally after reset");
+    check(frameReport.stageTimings.has_value(), "engine reset preserves the stage timing policy");
 }
 } // namespace
 

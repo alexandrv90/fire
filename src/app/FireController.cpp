@@ -51,14 +51,24 @@ void FireController::setParameters(const FireParameters& parameters) {
     emit parametersChanged(engine.parameters());
 }
 
+void FireController::setMetricsEnabled(const bool enabled) noexcept {
+    metricsEnabled = enabled;
+    engine.setStageTimingEnabled(enabled);
+}
+
 void FireController::onWake() {
     const auto now = Clock::now();
     const auto elapsed = now - lastWake;
     lastWake = now;
-    engine.profiler().wakeInterval.mark(now);
+    if (metricsEnabled) {
+        emit wakeMeasured(now);
+    }
 
     const FrameReport report = engine.advance(elapsed);
     if (report.ticksExecuted > 0) {
+        if (report.stageTimings.has_value()) {
+            emit frameMeasured(report);
+        }
         emit frameReady(report);
     }
 }

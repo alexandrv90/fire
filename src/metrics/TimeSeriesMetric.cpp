@@ -3,12 +3,12 @@
 #include <algorithm>
 
 namespace {
-double toMilliseconds(const TimeSeriesMetric::Clock::duration duration) noexcept {
+double toMilliseconds(const MetricsClock::duration duration) noexcept {
     return std::chrono::duration<double, std::milli>{duration}.count();
 }
 } // namespace
 
-void TimeSeriesMetric::record(const Clock::duration duration) noexcept {
+void TimeSeriesMetric::record(const MetricsClock::duration duration) noexcept {
     samples[nextSample] = duration;
     nextSample = (nextSample + 1) % samples.size();
     sampleCount = std::min(sampleCount + 1, samples.size());
@@ -24,7 +24,7 @@ MetricStatistics TimeSeriesMetric::statistics() const noexcept {
         return {};
     }
 
-    std::array<Clock::duration, MAXIMUM_SAMPLE_COUNT> sortedSamples{};
+    std::array<MetricsClock::duration, MAXIMUM_SAMPLE_COUNT> sortedSamples{};
     double totalMilliseconds = 0.0;
     for (std::size_t index = 0; index < sampleCount; ++index) {
         sortedSamples[index] = samples[index];

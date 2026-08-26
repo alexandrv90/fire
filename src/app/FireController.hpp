@@ -17,8 +17,6 @@ public:
     [[nodiscard]] bool isRunning() const noexcept { return wakeTimer.isActive(); }
     [[nodiscard]] const PixelBuffer& frame() const noexcept { return engine.frame(); }
     [[nodiscard]] const FireParameters& parameters() const noexcept { return engine.parameters(); }
-    [[nodiscard]] FrameProfiler& profiler() noexcept { return engine.profiler(); }
-    [[nodiscard]] const FrameProfiler& profiler() const noexcept { return engine.profiler(); }
 
 public slots:
     void run();
@@ -26,9 +24,12 @@ public slots:
     void toggleRunning();
     void reset();
     void setParameters(const FireParameters& parameters);
+    void setMetricsEnabled(bool enabled) noexcept;
 
 signals:
     void frameReady(FrameReport report);
+    void frameMeasured(FrameReport report);
+    void wakeMeasured(std::chrono::steady_clock::time_point now);
     void parametersChanged(FireParameters parameters);
     void runningChanged(bool running);
 
@@ -43,4 +44,5 @@ private:
     FireEngine engine;
     QTimer wakeTimer;
     Clock::time_point lastWake;
+    bool metricsEnabled{false};
 };

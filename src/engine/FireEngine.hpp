@@ -2,7 +2,6 @@
 
 #include "engine/FrameClock.hpp"
 #include "engine/FrameReport.hpp"
-#include "metrics/FrameProfiler.hpp"
 #include "render/FireRenderer.hpp"
 #include "sim/FireParameters.hpp"
 #include "sim/FireSimulation.hpp"
@@ -23,16 +22,18 @@ public:
     [[nodiscard]] const FireParameters& parameters() const noexcept { return simulation.parameters(); }
     void setParameters(const FireParameters& parameters) noexcept;
 
-    [[nodiscard]] FrameProfiler& profiler() noexcept { return frameProfiler; }
-    [[nodiscard]] const FrameProfiler& profiler() const noexcept { return frameProfiler; }
+    void setStageTimingEnabled(bool enabled) noexcept { stageTimingEnabled = enabled; }
 
 private:
     static constexpr int SIMULATION_TICKS_PER_SECOND = 60;
     static constexpr int MAXIMUM_TICKS_PER_WAKE = 3;
 
+    void simulate(int ticks) noexcept;
+    void shade();
+
     FireSimulation simulation;
     FireRenderer renderer;
     FrameClock clock{SIMULATION_TICKS_PER_SECOND, MAXIMUM_TICKS_PER_WAKE};
-    FrameProfiler frameProfiler;
     std::uint64_t frameIndex{0};
+    bool stageTimingEnabled{false};
 };

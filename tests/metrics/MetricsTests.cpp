@@ -1,12 +1,10 @@
-#include "metrics/FrameProfiler.hpp"
-#include "metrics/ScopedTimer.hpp"
+#include "metrics/IntervalMetric.hpp"
 
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <iostream>
 #include <string_view>
-#include <type_traits>
 
 namespace {
 using namespace std::chrono_literals;
@@ -72,7 +70,7 @@ void testTimeSeriesRollingWindow() {
 
 void testIntervalMetric() {
     IntervalMetric metric;
-    const IntervalMetric::Clock::time_point start{};
+    const MetricsClock::time_point start{};
 
     metric.mark(start);
     checkEmpty(metric.statistics(), "the first interval mark establishes a reference");
@@ -93,55 +91,12 @@ void testIntervalMetric() {
     checkNear(metric.statistics().averageMilliseconds, 4.0, "interval metric records after a new reference");
 }
 
-void testScopedTimer() {
-    static_assert(!std::is_copy_constructible_v<ScopedTimer>);
-    static_assert(!std::is_copy_assignable_v<ScopedTimer>);
-
-    TimeSeriesMetric metric;
-    {
-        const ScopedTimer timer{metric};
-    }
-
-    const MetricStatistics statistics = metric.statistics();
-    check(statistics.sampleCount == 1, "scoped timer records one sample on destruction");
-    check(statistics.averageMilliseconds >= 0.0, "scoped timer records a non-negative duration");
-    checkNear(statistics.percentile95Milliseconds,
-              statistics.averageMilliseconds,
-              "a scoped timer's single sample is its p95");
-    checkNear(statistics.maximumMilliseconds,
-              statistics.averageMilliseconds,
-              "a scoped timer's single sample is its maximum");
-}
-
-void testFrameProfilerClear() {
-    FrameProfiler profiler;
-    const IntervalMetric::Clock::time_point start{};
-
-    profiler.simulate.record(1ms);
-    profiler.shade.record(2ms);
-    profiler.wakeInterval.mark(start);
-    profiler.wakeInterval.mark(start + 3ms);
-    profiler.presentInterval.mark(start);
-    profiler.presentInterval.mark(start + 4ms);
-
-    profiler.clear();
-
-    checkEmpty(profiler.simulate.statistics(), "profiler clears simulate samples");
-    checkEmpty(profiler.shade.statistics(), "profiler clears shade samples");
-    checkEmpty(profiler.wakeInterval.statistics(), "profiler clears wake interval samples");
-    checkEmpty(profiler.presentInterval.statistics(), "profiler clears present interval samples");
-
-    profiler.wakeInterval.mark(start + 10ms);
-    checkEmpty(profiler.wakeInterval.statistics(), "profiler clear resets interval references");
-}
 } // namespace
 
 int main() {
     testTimeSeriesStatistics();
     testTimeSeriesRollingWindow();
     testIntervalMetric();
-    testScopedTimer();
-    testFrameProfilerClear();
 
     if (failureCount != 0) {
         std::cerr << failureCount << " metrics test assertion(s) failed\n";

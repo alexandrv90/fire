@@ -1,18 +1,17 @@
 #pragma once
 
+#include "metrics/MetricsClock.hpp"
 #include "metrics/TimeSeriesMetric.hpp"
 
 class IntervalMetric final {
 public:
-    using Clock = std::chrono::steady_clock;
-
-    void mark(Clock::time_point now) noexcept;
+    void mark(MetricsClock::time_point now) noexcept;
     void clear() noexcept;
 
     [[nodiscard]] MetricStatistics statistics() const noexcept;
 
 private:
     TimeSeriesMetric intervals;
-    Clock::time_point previousMark{};
+    MetricsClock::time_point previousMark{};
     bool hasPreviousMark{false};
 };
