@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QLabel>
+#include <QLayout>
 #include <QObject>
 #include <QPushButton>
 #include <QSlider>
@@ -22,6 +23,11 @@ QSlider* findSlider(ControlPanel& panel, const int minimum, const int maximum) {
     }
 
     return nullptr;
+}
+
+QLabel* valueLabelFor(const QSlider& slider) {
+    const int sliderIndex = slider.parentWidget()->layout()->indexOf(&slider);
+    return qobject_cast<QLabel*>(slider.parentWidget()->layout()->itemAt(sliderIndex + 1)->widget());
 }
 
 void testParameterValueBinding() {
@@ -42,6 +48,13 @@ void testParameterValueBinding() {
     check(sourceHeatSlider->value() == 128 && coolingSlider->value() == 3,
           "the panel initializes both sliders from one parameter value");
 
+    QLabel* const sourceHeatValueLabel = valueLabelFor(*sourceHeatSlider);
+    QLabel* const coolingValueLabel = valueLabelFor(*coolingSlider);
+    check(sourceHeatValueLabel != nullptr && sourceHeatValueLabel->text() == QStringLiteral("43%"),
+          "the source heat label shows its initial value as a percentage of the slider range");
+    check(coolingValueLabel != nullptr && coolingValueLabel->text() == QStringLiteral("29%"),
+          "the cooling label shows its initial value as a percentage of the slider range");
+
     int changeCount = 0;
     FireParameters reportedParameters;
     QObject::connect(
@@ -54,11 +67,15 @@ void testParameterValueBinding() {
     check(changeCount == 1, "a source heat edit emits one whole-value change");
     check(reportedParameters.sourceHeat() == 160 && reportedParameters.cooling() == 3,
           "a source heat edit preserves the current cooling value");
+    check(sourceHeatValueLabel != nullptr && sourceHeatValueLabel->text() == QStringLiteral("57%"),
+          "the source heat percentage follows slider edits");
 
     coolingSlider->setValue(5);
     check(changeCount == 2, "a cooling edit emits one whole-value change");
     check(reportedParameters.sourceHeat() == 160 && reportedParameters.cooling() == 5,
           "a cooling edit preserves the current source heat value");
+    check(coolingValueLabel != nullptr && coolingValueLabel->text() == QStringLiteral("57%"),
+          "the cooling percentage follows slider edits");
 
     FireParameters acceptedParameters;
     acceptedParameters.setSourceHeat(208);
@@ -68,6 +85,9 @@ void testParameterValueBinding() {
     check(changeCount == 2, "applying accepted parameters does not feed changes back to the controller");
     check(sourceHeatSlider->value() == 208 && coolingSlider->value() == 7,
           "applying accepted parameters updates both sliders");
+    check(sourceHeatValueLabel != nullptr && sourceHeatValueLabel->text() == QStringLiteral("79%") &&
+              coolingValueLabel != nullptr && coolingValueLabel->text() == QStringLiteral("86%"),
+          "applying accepted parameters updates both percentage labels");
 
     sourceHeatSlider->setValue(192);
     check(changeCount == 3, "editing after read-back emits one new change");

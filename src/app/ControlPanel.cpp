@@ -10,10 +10,16 @@
 #include <QSlider>
 
 namespace {
-QLabel* makeValueLabel(QWidget* const parent, const int initialValue) {
-    auto* const label = new QLabel(QString::number(initialValue), parent);
+QString percentageText(const int value, const int minimum, const int maximum) {
+    const int range = maximum - minimum;
+    const int percentage = ((value - minimum) * 100 + range / 2) / range;
+    return QStringLiteral("%1%").arg(percentage);
+}
+
+QLabel* makeValueLabel(QWidget* const parent, const QString& initialText) {
+    auto* const label = new QLabel(initialText, parent);
     label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    label->setMinimumWidth(28);
+    label->setMinimumWidth(36);
     return label;
 }
 
@@ -25,13 +31,14 @@ QSlider* addSlider(QHBoxLayout& layout,
                    const int initialValue) {
     auto* const titleLabel = new QLabel(title, parent);
     auto* const slider = new QSlider(Qt::Horizontal, parent);
-    auto* const valueLabel = makeValueLabel(parent, initialValue);
+    auto* const valueLabel = makeValueLabel(parent, percentageText(initialValue, minimum, maximum));
     slider->setRange(minimum, maximum);
     slider->setValue(initialValue);
     slider->setMinimumWidth(90);
 
-    QObject::connect(
-        slider, &QSlider::valueChanged, valueLabel, [valueLabel](const int value) { valueLabel->setNum(value); });
+    QObject::connect(slider, &QSlider::valueChanged, valueLabel, [valueLabel, minimum, maximum](const int value) {
+        valueLabel->setText(percentageText(value, minimum, maximum));
+    });
 
     layout.addWidget(titleLabel);
     layout.addWidget(slider, 1);
