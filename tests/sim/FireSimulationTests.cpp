@@ -85,7 +85,7 @@ void advance(FireSimulation& simulation, const int tickCount) noexcept {
 }
 
 void testConstruction() {
-    const FireSimulation simulation{SIMULATION_DIMENSIONS, RANDOM_SEED};
+    FireSimulation simulation{SIMULATION_DIMENSIONS, RANDOM_SEED};
     const HeatFrame heat = simulation.heat();
 
     check(simulation.dimensions() == SIMULATION_DIMENSIONS, "simulation retains its configured dimensions");

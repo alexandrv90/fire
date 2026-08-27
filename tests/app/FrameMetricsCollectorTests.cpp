@@ -54,7 +54,6 @@ void testCollectorRecordsEnabledObservations() {
     check(snapshot.paintDuration.sampleCount == 2, "collector counts paint duration samples");
     checkNear(snapshot.paintInterval.averageMilliseconds, 16.0, "collector records paint start intervals");
     check(snapshot.paintInterval.sampleCount == 1, "the first paint establishes the interval reference");
-    check(snapshot.wakeActivity.windowDuration == 30ms, "collector accumulates elapsed wake time");
     check(snapshot.wakeActivity.discardedTime == 3ms, "collector accumulates discarded time");
     check(snapshot.wakeActivity.idleWakeCount == 1, "collector counts zero-tick wakes");
     check(snapshot.wakeActivity.sampleCount == 2, "collector counts activity samples");
@@ -121,8 +120,6 @@ void testWakeActivityUsesRollingWindow() {
     }
 
     const WakeActivityStatistics activity = collector.snapshot().wakeActivity;
-    check(activity.windowDuration == std::chrono::milliseconds{16 * METRIC_WINDOW_SAMPLE_COUNT},
-          "wake activity retains elapsed time for the rolling window");
     check(activity.discardedTime == MetricsClock::duration{},
           "discarded time leaves the total when its sample is evicted");
     check(activity.idleWakeCount == 0, "idle wakes leave the total when their samples are evicted");

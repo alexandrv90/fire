@@ -13,7 +13,6 @@
 #include <cstdint>
 
 struct WakeActivityStatistics {
-    MetricsClock::duration windowDuration{};
     MetricsClock::duration discardedTime{};
     std::size_t idleWakeCount{0};
     std::size_t sampleCount{0};
@@ -55,7 +54,6 @@ private:
     TimeSeriesMetric paintDuration;
     IntervalMetric paintInterval;
     IntervalMetric wakeInterval;
-    RollingSumMetric<MetricsClock::duration> wakeElapsedTime;
     RollingSumMetric<MetricsClock::duration> discardedTime;
     RollingSumMetric<std::size_t> idleWakeCount;
     std::uint64_t latestFrameIndex{0};

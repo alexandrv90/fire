@@ -29,13 +29,6 @@ QString formatMetricRow(const QString& name, const MetricStatistics& statistics)
         .arg(formatMetricValue(statistics.maximumMilliseconds, statistics.sampleCount), 8);
 }
 
-QString formatWindowSummary(const WakeActivityStatistics& wakeActivity) {
-    const double windowSeconds = std::chrono::duration<double>{wakeActivity.windowDuration}.count();
-    return QStringLiteral("Window %1 s | %2 samples")
-        .arg(windowSeconds, 0, 'f', 2)
-        .arg(static_cast<qulonglong>(wakeActivity.sampleCount));
-}
-
 double milliseconds(const MetricsClock::duration duration) noexcept {
     return std::chrono::duration<double, std::milli>{duration}.count();
 }
@@ -61,10 +54,15 @@ StatsPanel::StatsPanel(const FrameMetricsCollector& metricsCollector, QWidget* c
     QFont headingFont = fixedFont;
     headingFont.setBold(true);
 
-    windowSummaryLabel = new QLabel(this);
-    windowSummaryLabel->setObjectName(QStringLiteral("windowSummaryLabel"));
-    windowSummaryLabel->setFont(headingFont);
-    windowSummaryLabel->setTextFormat(Qt::PlainText);
+    columnHeaderLabel = new QLabel(this);
+    columnHeaderLabel->setObjectName(QStringLiteral("columnHeaderLabel"));
+    columnHeaderLabel->setFont(headingFont);
+    columnHeaderLabel->setTextFormat(Qt::PlainText);
+    columnHeaderLabel->setText(QStringLiteral("%1 %2 %3 %4")
+                                   .arg(QStringLiteral("Metric"), -15)
+                                   .arg(QStringLiteral("avg"), 8)
+                                   .arg(QStringLiteral("p95"), 8)
+                                   .arg(QStringLiteral("max"), 8));
 
     metricRowsLabel = new QLabel(this);
     metricRowsLabel->setObjectName(QStringLiteral("metricRowsLabel"));
@@ -76,7 +74,7 @@ StatsPanel::StatsPanel(const FrameMetricsCollector& metricsCollector, QWidget* c
     frameSummaryLabel->setFont(fixedFont);
     frameSummaryLabel->setTextFormat(Qt::PlainText);
 
-    panelLayout->addWidget(windowSummaryLabel);
+    panelLayout->addWidget(columnHeaderLabel);
     panelLayout->addWidget(metricRowsLabel);
     panelLayout->addWidget(frameSummaryLabel);
 
@@ -110,15 +108,9 @@ void StatsPanel::paintEvent(QPaintEvent* const event) {
 
 void StatsPanel::refresh() {
     const FrameMetricsSnapshot snapshot = metricsCollector.snapshot();
-    windowSummaryLabel->setText(formatWindowSummary(snapshot.wakeActivity));
 
     QStringList metricRows;
-    metricRows.reserve(6);
-    metricRows.append(QStringLiteral("%1 %2 %3 %4")
-                          .arg(QStringLiteral("Metric"), -15)
-                          .arg(QStringLiteral("avg"), 8)
-                          .arg(QStringLiteral("p95"), 8)
-                          .arg(QStringLiteral("max"), 8));
+    metricRows.reserve(5);
     metricRows.append(formatMetricRow(QStringLiteral("Simulate"), snapshot.simulateDuration));
     metricRows.append(formatMetricRow(QStringLiteral("Shade"), snapshot.shadeDuration));
     metricRows.append(formatMetricRow(QStringLiteral("Paint"), snapshot.paintDuration));

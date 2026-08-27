@@ -23,7 +23,7 @@ private:
     void updateRefreshTimer();
 
     const FrameMetricsCollector& metricsCollector;
-    QLabel* windowSummaryLabel{nullptr};
+    QLabel* columnHeaderLabel{nullptr};
     QLabel* metricRowsLabel{nullptr};
     QLabel* frameSummaryLabel{nullptr};
     QTimer* refreshTimer{nullptr};

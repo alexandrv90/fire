@@ -27,7 +27,7 @@ public slots:
     void pause();
     void toggleRunning();
     void reset();
-    void setPalettePreset(FirePalettePresetId preset) noexcept;
+    void setPalettePreset(FirePalettePresetId preset);
     void setParameters(const FireParameters& parameters);
     void setMetricsEnabled(bool enabled) noexcept;
     void setSuspended(bool suspended);
@@ -40,7 +40,7 @@ signals:
     void runningChanged(bool running);
 
 private slots:
-    void onWake() noexcept;
+    void onWake();
 
 private:
     using Clock = std::chrono::steady_clock;

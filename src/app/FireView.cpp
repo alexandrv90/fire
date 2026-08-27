@@ -47,9 +47,9 @@ FireView::FireView(const PixelBuffer& pixels, QWidget* const parent) : QWidget(p
 void FireView::present() { update(); }
 
 void FireView::paintEvent(QPaintEvent* const event) {
-    Q_UNUSED(event);
-
     const auto paintStartedAt = MetricsClock::now();
+    const bool paintedWholeView = event->rect() == rect();
+
     QPainter painter(this);
     painter.fillRect(rect(), Qt::black);
     painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
@@ -57,7 +57,7 @@ void FireView::paintEvent(QPaintEvent* const event) {
     const FitRect fitted = fitPreservingAspect(width(), height(), frame.width(), frame.height());
     painter.drawImage(QRect{fitted.x, fitted.y, fitted.width, fitted.height}, frame);
 
-    if (metricsEnabled) {
+    if (metricsEnabled && paintedWholeView) {
         emit paintMeasured(paintStartedAt, MetricsClock::now() - paintStartedAt);
     }
 }

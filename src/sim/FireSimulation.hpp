@@ -19,9 +19,7 @@ public:
     void reset() noexcept;
 
     [[nodiscard]] Dimensions dimensions() const noexcept { return simulationDimensions; }
-
-    // Converts the fixed-point field to palette indices on demand.
-    [[nodiscard]] HeatFrame heat() const noexcept;
+    [[nodiscard]] HeatFrame heat() noexcept;
 
     [[nodiscard]] const FireParameters& parameters() const noexcept { return simulationParameters; }
     void setParameters(const FireParameters& parameters) noexcept;
@@ -39,7 +37,7 @@ private:
     void addNoiseOctave(std::size_t spacingX, std::size_t spacingY, double weight);
     void applyParameters() noexcept;
     void wrapEdges() noexcept;
-    void refreshHeatMap() const noexcept;
+    void refreshHeatMap() noexcept;
 
     const Dimensions simulationDimensions;
     // The hidden surplus columns make the cooling lattice periodic.
@@ -48,8 +46,8 @@ private:
 
     std::vector<Cell> heatField;
     std::vector<std::uint16_t> coolingMap;
-    mutable std::vector<std::uint8_t> heatMap;
-    mutable bool heatMapStale{true};
+    std::vector<std::uint8_t> heatMap;
+    bool heatMapStale{true};
 
     std::uint32_t randomState;
     std::uint32_t coolingAmplitude{0};

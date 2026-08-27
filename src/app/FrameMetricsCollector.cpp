@@ -10,10 +10,9 @@ FrameMetricsSnapshot FrameMetricsCollector::snapshot() const noexcept {
         paintDuration.statistics(),
         paintInterval.statistics(),
         WakeActivityStatistics{
-            wakeElapsedTime.total(),
             discardedTime.total(),
             idleWakeCount.total(),
-            wakeElapsedTime.sampleCount(),
+            discardedTime.sampleCount(),
         },
         latestFrameIndex,
     };
@@ -37,7 +36,6 @@ void FrameMetricsCollector::clear() noexcept {
     wakeInterval.clear();
     paintDuration.clear();
     paintInterval.clear();
-    wakeElapsedTime.clear();
     discardedTime.clear();
     idleWakeCount.clear();
     latestFrameIndex = 0;
@@ -60,7 +58,6 @@ void FrameMetricsCollector::observeAdvance(const FrameReport report) noexcept {
         simulateDuration.record(report.stageTimings->simulateDuration);
         shadeDuration.record(report.stageTimings->shadeDuration);
     }
-    wakeElapsedTime.record(report.elapsed);
     discardedTime.record(report.discardedTime);
     idleWakeCount.record(report.ticksExecuted == 0 ? 1U : 0U);
     latestFrameIndex = report.frameIndex;

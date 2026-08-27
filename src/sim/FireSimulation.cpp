@@ -121,7 +121,7 @@ void FireSimulation::reset() noexcept {
     heatMapStale = true;
 }
 
-HeatFrame FireSimulation::heat() const noexcept {
+HeatFrame FireSimulation::heat() noexcept {
     if (heatMapStale) {
         refreshHeatMap();
     }
@@ -210,7 +210,7 @@ void FireSimulation::wrapEdges() noexcept {
     }
 }
 
-void FireSimulation::refreshHeatMap() const noexcept {
+void FireSimulation::refreshHeatMap() noexcept {
     for (std::size_t y = 0; y < simulationDimensions.height; ++y) {
         const Cell* const cells = row(y);
         std::uint8_t* const destination = heatMap.data() + y * simulationDimensions.width;
