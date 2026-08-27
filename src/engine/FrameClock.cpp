@@ -1,5 +1,7 @@
 #include "engine/FrameClock.hpp"
 
+#include <algorithm>
+
 FrameClock::FrameClock(const std::chrono::duration<double> tickDuration, const int maximumTicksPerWake)
     : tickDuration(tickDuration), maximumTicksPerWake(maximumTicksPerWake) {}
 
@@ -14,9 +16,9 @@ TickPlan FrameClock::consume(const std::chrono::steady_clock::duration elapsed) 
     }
 
     int ticks = 0;
-    while (accumulatedTime >= tickDuration && ticks < maximumTicksPerWake) {
-        accumulatedTime -= tickDuration;
-        ++ticks;
+    if (accumulatedTime >= tickDuration) {
+        ticks = std::min(static_cast<int>(accumulatedTime / tickDuration), maximumTicksPerWake);
+        accumulatedTime -= tickDuration * ticks;
     }
 
     return TickPlan{ticks, std::chrono::duration_cast<std::chrono::steady_clock::duration>(discardedTime)};

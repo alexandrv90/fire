@@ -13,8 +13,16 @@ using namespace std::chrono_literals;
 using fire_tests::check;
 
 using TickDuration = std::chrono::duration<double>;
+using ClockDuration = std::chrono::steady_clock::duration;
 
-constexpr TickDuration PRODUCTION_TICK_DURATION{1.0 / 60.0};
+constexpr TickDuration PRODUCTION_TICK_DURATION{1.0 / 90.0};
+constexpr int PRODUCTION_MAXIMUM_TICKS_PER_WAKE = 3;
+constexpr ClockDuration PRODUCTION_PARTIAL_TICK_ELAPSED = std::chrono::floor<ClockDuration>(PRODUCTION_TICK_DURATION);
+constexpr ClockDuration PRODUCTION_TICK_COMPLETION_ELAPSED =
+    std::chrono::ceil<ClockDuration>(PRODUCTION_TICK_DURATION) - PRODUCTION_PARTIAL_TICK_ELAPSED;
+constexpr ClockDuration PRODUCTION_TICK_ELAPSED = std::chrono::ceil<ClockDuration>(PRODUCTION_TICK_DURATION);
+constexpr ClockDuration PRODUCTION_CATCH_UP_ELAPSED =
+    std::chrono::ceil<ClockDuration>(PRODUCTION_TICK_DURATION * (PRODUCTION_MAXIMUM_TICKS_PER_WAKE + 1));
 
 void checkPlan(const TickPlan& plan,
                const int expectedTicks,
@@ -40,10 +48,16 @@ void testCatchUpClampReportsDiscardedTime() {
 }
 
 void testProductionTickDurationBoundary() {
-    FrameClock clock{PRODUCTION_TICK_DURATION, 3};
+    FrameClock clock{PRODUCTION_TICK_DURATION, PRODUCTION_MAXIMUM_TICKS_PER_WAKE};
 
-    checkPlan(clock.consume(16ms), 0, 0ns, "a sixteen millisecond wake is shorter than one 60 Hz step");
-    checkPlan(clock.consume(1ms), 1, 0ns, "the next wake drains the accumulated 60 Hz step");
+    checkPlan(clock.consume(PRODUCTION_PARTIAL_TICK_ELAPSED),
+              0,
+              0ns,
+              "an elapsed duration below the production tick duration produces no tick");
+    checkPlan(clock.consume(PRODUCTION_TICK_COMPLETION_ELAPSED),
+              1,
+              0ns,
+              "the next wake completes the accumulated production tick");
 }
 
 void testResetClearsAccumulatedTime() {
@@ -66,9 +80,9 @@ void testEngineProducesOnlyTickedFrames() {
     check(engine.frame().width() == 8 && engine.frame().height() == 6,
           "the engine initializes a rendered frame with simulation geometry");
 
-    const FrameReport idleReport = engine.advance(16ms);
+    const FrameReport idleReport = engine.advance(PRODUCTION_PARTIAL_TICK_ELAPSED);
     check(idleReport.ticksExecuted == 0, "an engine wake shorter than one step executes no ticks");
-    check(idleReport.elapsed == 16ms, "an engine report retains its elapsed wall time");
+    check(idleReport.elapsed == PRODUCTION_PARTIAL_TICK_ELAPSED, "an engine report retains its elapsed wall time");
     check(idleReport.discardedTime == 0ns, "an ordinary engine wake discards no time");
     check(idleReport.frameIndex == 0, "a zero-tick wake does not advance the frame index");
     check(!idleReport.stageTimings.has_value(), "a zero-tick wake reports no stage timings");
@@ -76,7 +90,7 @@ void testEngineProducesOnlyTickedFrames() {
           "a zero-tick wake leaves the rendered frame untouched");
 
     engine.setStageTimingEnabled(true);
-    const FrameReport frameReport = engine.advance(1ms);
+    const FrameReport frameReport = engine.advance(PRODUCTION_TICK_COMPLETION_ELAPSED);
     check(frameReport.ticksExecuted == 1, "accumulated engine time executes a simulation tick");
     check(frameReport.frameIndex == 1, "a produced frame advances the frame index");
     check(frameReport.stageTimings.has_value(), "an enabled engine reports produced-frame stage timings");
@@ -86,7 +100,7 @@ void testEngineProducesOnlyTickedFrames() {
     check(copyPixels(engine.frame()) != initialPixels, "a ticked engine shades the updated simulation");
 
     engine.setStageTimingEnabled(false);
-    const FrameReport unmeasuredReport = engine.advance(17ms);
+    const FrameReport unmeasuredReport = engine.advance(PRODUCTION_TICK_ELAPSED);
     check(unmeasuredReport.ticksExecuted == 1 && !unmeasuredReport.stageTimings.has_value(),
           "a disabled engine produces frames without measuring stage timings");
 }
@@ -101,8 +115,8 @@ void testEngineReportsCatchUpAndParameters() {
     check(engine.parameters().sourceHeat() == 96 && engine.parameters().cooling() == 7,
           "the engine accepts a complete parameter value");
 
-    const FrameReport report = engine.advance(100ms);
-    check(report.ticksExecuted == 3, "the engine applies the maximum ticks per wake");
+    const FrameReport report = engine.advance(PRODUCTION_CATCH_UP_ELAPSED);
+    check(report.ticksExecuted == PRODUCTION_MAXIMUM_TICKS_PER_WAKE, "the engine applies the maximum ticks per wake");
     check(report.discardedTime > 0ns, "the engine reports time discarded by its catch-up clamp");
     check(report.frameIndex == 1, "multiple ticks in one wake produce one frame");
 }
@@ -112,23 +126,23 @@ void testEngineResetRestoresInitialState() {
     const std::vector<Rgba32> initialPixels = copyPixels(engine.frame());
 
     engine.setStageTimingEnabled(true);
-    static_cast<void>(engine.advance(16ms));
-    static_cast<void>(engine.advance(1ms));
+    static_cast<void>(engine.advance(PRODUCTION_PARTIAL_TICK_ELAPSED));
+    static_cast<void>(engine.advance(PRODUCTION_TICK_COMPLETION_ELAPSED));
     engine.reset();
 
     check(copyPixels(engine.frame()) == initialPixels, "engine reset restores the initial rendered frame");
-    const FrameReport idleReport = engine.advance(1ms);
+    const FrameReport idleReport = engine.advance(PRODUCTION_TICK_COMPLETION_ELAPSED);
     check(idleReport.ticksExecuted == 0 && idleReport.frameIndex == 0,
           "engine reset clears accumulated time and restarts frame indexing");
 
-    const FrameReport frameReport = engine.advance(16ms);
+    const FrameReport frameReport = engine.advance(PRODUCTION_PARTIAL_TICK_ELAPSED);
     check(frameReport.ticksExecuted == 1 && frameReport.frameIndex == 1, "engine produces frames normally after reset");
     check(frameReport.stageTimings.has_value(), "engine reset preserves the stage timing policy");
 }
 
 void testEngineSwitchesPaletteWithoutResettingSimulation() {
     FireEngine engine{8, 6};
-    static_cast<void>(engine.advance(17ms));
+    static_cast<void>(engine.advance(PRODUCTION_TICK_ELAPSED));
     const Rgba32* const frameStorage = engine.frame().data();
     const std::vector<Rgba32> classicPixels = copyPixels(engine.frame());
 

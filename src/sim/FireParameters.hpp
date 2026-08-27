@@ -19,6 +19,6 @@ public:
     [[nodiscard]] std::uint8_t cooling() const noexcept { return coolingRate; }
 
 private:
-    std::uint8_t sourceHeatLevel{MAXIMUM_SOURCE_HEAT};
-    std::uint8_t coolingRate{2};
+    std::uint8_t sourceHeatLevel{240};
+    std::uint8_t coolingRate{4};
 };

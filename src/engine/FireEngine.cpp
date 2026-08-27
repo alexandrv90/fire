@@ -50,7 +50,7 @@ void FireEngine::setPalettePreset(const FirePalettePresetId preset) noexcept {
     shade();
 }
 
-void FireEngine::setParameters(const FireParameters& parameters) noexcept { simulation.parameters() = parameters; }
+void FireEngine::setParameters(const FireParameters& parameters) noexcept { simulation.setParameters(parameters); }
 
 void FireEngine::simulate(const int ticks) noexcept {
     for (int tick = 0; tick < ticks; ++tick) {
