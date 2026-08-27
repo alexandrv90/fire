@@ -7,6 +7,7 @@ fire_add_library(fire_app
     AUTOMOC
     STATIC
     SOURCES
+        AspectFit.hpp
         ControlPanel.cpp
         ControlPanel.hpp
         FireController.cpp
@@ -19,7 +20,6 @@ fire_add_library(fire_app
         MainWindow.hpp
         StatsPanel.cpp
         StatsPanel.hpp
-        Utils.hpp
     PUBLIC_DEPENDENCIES
         fire_engine
         fire_metrics

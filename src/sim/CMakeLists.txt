@@ -1,5 +1,6 @@
 fire_add_library(fire_simulation
     SOURCES
+        Dimensions.hpp
         FireParameters.cpp
         FireParameters.hpp
         FireSimulation.cpp

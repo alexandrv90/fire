@@ -8,8 +8,10 @@
 namespace {
 using fire_tests::check;
 
+constexpr Dimensions TEST_DIMENSIONS{8, 6};
+
 void testSuspensionPreservesRequestedRunState() {
-    FireController controller;
+    FireController controller{TEST_DIMENSIONS};
     std::vector<bool> runningTransitions;
     QObject::connect(&controller,
                      &FireController::runningChanged,
@@ -38,7 +40,7 @@ void testSuspensionPreservesRequestedRunState() {
 }
 
 void testPausedControllerStaysPausedAcrossSuspension() {
-    FireController controller;
+    FireController controller{TEST_DIMENSIONS};
     controller.run();
     controller.pause();
 
@@ -51,7 +53,7 @@ void testPausedControllerStaysPausedAcrossSuspension() {
 }
 
 void testRunRequestWhileSuspendedWaitsForRestore() {
-    FireController controller;
+    FireController controller{TEST_DIMENSIONS};
     controller.setSuspended(true);
     controller.run();
 
@@ -63,7 +65,7 @@ void testRunRequestWhileSuspendedWaitsForRestore() {
 }
 
 void testPaletteSelectionPublishesAnImmediateFrame() {
-    FireController controller;
+    FireController controller{TEST_DIMENSIONS};
     int frameReadyCount = 0;
     QObject::connect(&controller, &FireController::frameReady, &controller, [&frameReadyCount] { ++frameReadyCount; });
 

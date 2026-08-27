@@ -1,6 +1,13 @@
 #include "app/FireController.hpp"
 
-FireController::FireController(QObject* const parent) : QObject(parent) {
+FireController::FireController(QObject* const parent) : QObject(parent) { initializeWakeTimer(); }
+
+FireController::FireController(const Dimensions dimensions, QObject* const parent)
+    : QObject(parent), engine(dimensions) {
+    initializeWakeTimer();
+}
+
+void FireController::initializeWakeTimer() {
     wakeTimer.setTimerType(Qt::PreciseTimer);
     wakeTimer.setInterval(WAKE_INTERVAL_MILLISECONDS);
     connect(&wakeTimer, &QTimer::timeout, this, &FireController::onWake);

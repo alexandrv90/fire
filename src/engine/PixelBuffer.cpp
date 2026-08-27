@@ -1,20 +1,20 @@
 #include "engine/PixelBuffer.hpp"
 
 #include <cassert>
-#include <limits>
 #include <stdexcept>
 
-void PixelBuffer::resize(const std::size_t width, const std::size_t height) {
-    if (width != 0 && height > std::numeric_limits<std::size_t>::max() / width) {
+PixelBuffer::PixelBuffer(const Dimensions dimensions) : bufferDimensions(dimensions) {
+    if (bufferDimensions.isEmpty()) {
+        throw std::invalid_argument("Pixel buffer dimensions must both be non-zero");
+    }
+    if (!bufferDimensions.hasRepresentableArea() || bufferDimensions.area() > pixels.max_size()) {
         throw std::length_error("Pixel buffer dimensions are too large");
     }
 
-    pixels.resize(width * height);
-    bufferWidth = width;
-    bufferHeight = height;
+    pixels.resize(bufferDimensions.area());
 }
 
 std::span<Rgba32> PixelBuffer::row(const std::size_t y) noexcept {
-    assert(y < bufferHeight);
-    return std::span<Rgba32>{pixels}.subspan(y * bufferWidth, bufferWidth);
+    assert(y < bufferDimensions.height);
+    return std::span<Rgba32>{pixels}.subspan(y * bufferDimensions.width, bufferDimensions.width);
 }

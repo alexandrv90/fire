@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/FireEngine.hpp"
+#include "sim/Dimensions.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -12,6 +13,7 @@ class FireController final : public QObject {
 
 public:
     explicit FireController(QObject* parent = nullptr);
+    explicit FireController(Dimensions dimensions, QObject* parent = nullptr);
 
     [[nodiscard]] bool isRunning() const noexcept { return wakeTimer.isActive(); }
     [[nodiscard]] bool isRunRequested() const noexcept { return runRequested; }
@@ -45,6 +47,7 @@ private:
 
     static constexpr int WAKE_INTERVAL_MILLISECONDS = 16;
 
+    void initializeWakeTimer();
     void updateWakeTimer();
 
     FireEngine engine;

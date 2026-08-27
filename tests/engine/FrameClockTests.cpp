@@ -70,14 +70,15 @@ void testResetClearsAccumulatedTime() {
 }
 
 [[nodiscard]] std::vector<Rgba32> copyPixels(const PixelBuffer& frame) {
-    return {frame.data(), frame.data() + frame.width() * frame.height()};
+    return {frame.data(), frame.data() + frame.dimensions().area()};
 }
 
 void testEngineProducesOnlyTickedFrames() {
-    FireEngine engine{8, 6};
+    FireEngine engine{{8, 6}};
     const Rgba32* const initialStorage = engine.frame().data();
     const std::vector<Rgba32> initialPixels = copyPixels(engine.frame());
-    check(engine.frame().width() == 8 && engine.frame().height() == 6,
+    check(engine.dimensions() == Dimensions{8, 6}, "the engine retains its configured simulation geometry");
+    check(engine.frame().dimensions() == engine.dimensions(),
           "the engine initializes a rendered frame with simulation geometry");
 
     const FrameReport idleReport = engine.advance(PRODUCTION_PARTIAL_TICK_ELAPSED);
@@ -105,8 +106,15 @@ void testEngineProducesOnlyTickedFrames() {
           "a disabled engine produces frames without measuring stage timings");
 }
 
+void testEngineUsesCompileTimeDefaultDimensions() {
+    FireEngine engine;
+    check(engine.dimensions() == FireEngine::defaultDimensions(),
+          "the default engine uses its compile-time dimensions");
+    check(engine.frame().dimensions() == engine.dimensions(), "the default rendered frame uses the engine dimensions");
+}
+
 void testEngineReportsCatchUpAndParameters() {
-    FireEngine engine{8, 6};
+    FireEngine engine{{8, 6}};
     FireParameters parameters = engine.parameters();
     parameters.setSourceHeat(96);
     parameters.setCooling(7);
@@ -122,7 +130,7 @@ void testEngineReportsCatchUpAndParameters() {
 }
 
 void testEngineResetRestoresInitialState() {
-    FireEngine engine{8, 6};
+    FireEngine engine{{8, 6}};
     const std::vector<Rgba32> initialPixels = copyPixels(engine.frame());
 
     engine.setStageTimingEnabled(true);
@@ -141,7 +149,7 @@ void testEngineResetRestoresInitialState() {
 }
 
 void testEngineSwitchesPaletteWithoutResettingSimulation() {
-    FireEngine engine{8, 6};
+    FireEngine engine{{8, 6}};
     static_cast<void>(engine.advance(PRODUCTION_TICK_ELAPSED));
     const Rgba32* const frameStorage = engine.frame().data();
     const std::vector<Rgba32> classicPixels = copyPixels(engine.frame());
@@ -171,6 +179,7 @@ int main() {
     testCatchUpClampReportsDiscardedTime();
     testProductionTickDurationBoundary();
     testResetClearsAccumulatedTime();
+    testEngineUsesCompileTimeDefaultDimensions();
     testEngineProducesOnlyTickedFrames();
     testEngineReportsCatchUpAndParameters();
     testEngineResetRestoresInitialState();

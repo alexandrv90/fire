@@ -2,9 +2,14 @@
 
 #include "engine/FirePalette.hpp"
 
-FireEngine::FireEngine(const std::size_t simulationWidth, const std::size_t simulationHeight)
-    : simulation(simulationWidth, simulationHeight), renderer(FirePalette::fromPreset(selectedPalettePreset)) {
-    renderer.render(simulation.heat());
+static_assert(FireEngine::defaultDimensions().width >= 2 && FireEngine::defaultDimensions().height >= 2);
+static_assert(FireEngine::defaultDimensions().hasRepresentableArea());
+
+FireEngine::FireEngine() : FireEngine(DEFAULT_DIMENSIONS) {}
+
+FireEngine::FireEngine(const Dimensions dimensions)
+    : simulation(dimensions), renderedFrame(dimensions), renderer(FirePalette::fromPreset(selectedPalettePreset)) {
+    renderer.render(simulation.heat(), renderedFrame);
 }
 
 FrameReport FireEngine::advance(const std::chrono::steady_clock::duration elapsed) noexcept {
@@ -33,7 +38,7 @@ FrameReport FireEngine::advance(const std::chrono::steady_clock::duration elapse
 
 void FireEngine::reset() noexcept {
     simulation.reset();
-    renderer.render(simulation.heat());
+    renderer.render(simulation.heat(), renderedFrame);
     clock.reset();
     frameIndex = 0;
 }
@@ -58,4 +63,4 @@ void FireEngine::simulate(const int ticks) noexcept {
     }
 }
 
-void FireEngine::shade() noexcept { renderer.render(simulation.heat()); }
+void FireEngine::shade() noexcept { renderer.render(simulation.heat(), renderedFrame); }

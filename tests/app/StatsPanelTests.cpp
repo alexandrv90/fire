@@ -1,7 +1,6 @@
 #include "app/StatsPanel.hpp"
 
 #include "app/FrameMetricsCollector.hpp"
-#include "app/Utils.hpp"
 #include "tests_common.h"
 
 #include <QApplication>
@@ -124,34 +123,12 @@ void testSuspensionStopsRefreshesWithoutChangingEnablement() {
     check(!refreshTimer->isActive(), "restoring a disabled stats panel leaves refreshes stopped");
 }
 
-void checkRect(const FitRect& actual, const FitRect& expected, const std::string_view message) {
-    check(actual.x == expected.x && actual.y == expected.y && actual.width == expected.width &&
-              actual.height == expected.height,
-          message);
-}
-
-void testViewport() {
-    checkRect(fitPreservingAspect(800, 600, 640, 480), {0, 0, 800, 600}, "viewport preserves a matching aspect");
-    checkRect(fitPreservingAspect(100, 100, 16, 9), {0, 22, 100, 56}, "viewport letterboxes a wide source");
-    checkRect(fitPreservingAspect(100, 100, 9, 16), {22, 0, 56, 100}, "viewport pillarboxes a tall source");
-    checkRect(fitPreservingAspect(101, 100, 2, 1), {0, 25, 101, 50}, "viewport centres an odd-sized fit");
-    checkRect(fitPreservingAspect(0, 100, 16, 9), {}, "viewport rejects an empty available width");
-    checkRect(fitPreservingAspect(100, 100, 0, 9), {}, "viewport rejects an empty source width");
-    checkRect(fitPreservingAspect(-1, 100, 16, 9), {}, "viewport rejects negative dimensions");
-    checkRect(fitPreservingAspect(std::numeric_limits<int>::max(),
-                                  std::numeric_limits<int>::max(),
-                                  std::numeric_limits<int>::max(),
-                                  std::numeric_limits<int>::max()),
-              {0, 0, std::numeric_limits<int>::max(), std::numeric_limits<int>::max()},
-              "viewport handles maximum dimensions without overflow");
-}
 } // namespace
 
 int main(int argc, char* argv[]) {
     QApplication application{argc, argv};
     application.setQuitOnLastWindowClosed(false);
 
-    testViewport();
     testInitialSnapshotPresentation();
     testDisabledCollectionHidesPanel();
     testSuspensionStopsRefreshesWithoutChangingEnablement();

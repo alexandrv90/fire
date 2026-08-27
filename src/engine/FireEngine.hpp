@@ -3,6 +3,8 @@
 #include "engine/FireRenderer.hpp"
 #include "engine/FrameClock.hpp"
 #include "engine/FrameReport.hpp"
+#include "engine/PixelBuffer.hpp"
+#include "sim/Dimensions.hpp"
 #include "sim/FireParameters.hpp"
 #include "sim/FireSimulation.hpp"
 
@@ -12,13 +14,16 @@
 
 class FireEngine final {
 public:
-    explicit FireEngine(std::size_t simulationWidth = SIMULATION_WIDTH,
-                        std::size_t simulationHeight = SIMULATION_HEIGHT);
+    FireEngine();
+    explicit FireEngine(Dimensions dimensions);
+
+    [[nodiscard]] static constexpr Dimensions defaultDimensions() noexcept { return DEFAULT_DIMENSIONS; }
 
     [[nodiscard]] FrameReport advance(std::chrono::steady_clock::duration elapsed) noexcept;
     void reset() noexcept;
 
-    [[nodiscard]] const PixelBuffer& frame() const noexcept { return renderer.target(); }
+    [[nodiscard]] Dimensions dimensions() const noexcept { return simulation.dimensions(); }
+    [[nodiscard]] const PixelBuffer& frame() const noexcept { return renderedFrame; }
 
     [[nodiscard]] FirePalettePresetId palettePreset() const noexcept { return selectedPalettePreset; }
     void setPalettePreset(FirePalettePresetId preset) noexcept;
@@ -29,8 +34,7 @@ public:
     void setStageTimingEnabled(bool enabled) noexcept { stageTimingEnabled = enabled; }
 
 private:
-    static constexpr int SIMULATION_WIDTH = 600;
-    static constexpr int SIMULATION_HEIGHT = 400;
+    static constexpr Dimensions DEFAULT_DIMENSIONS{600, 400};
     static constexpr int MAXIMUM_TICKS_PER_WAKE = 3;
     static constexpr std::chrono::duration<double> TICK_DURATION{1.0 / 90.0}; // 90Hz
 
@@ -38,6 +42,7 @@ private:
     void shade() noexcept;
 
     FireSimulation simulation;
+    PixelBuffer renderedFrame;
     FirePalettePresetId selectedPalettePreset{FirePalettePresetId::Classic};
     FireRenderer renderer;
     FrameClock clock{TICK_DURATION, MAXIMUM_TICKS_PER_WAKE};

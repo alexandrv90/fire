@@ -11,6 +11,7 @@
 namespace {
 constexpr std::size_t SIMULATION_WIDTH = 64;
 constexpr std::size_t SIMULATION_HEIGHT = 48;
+constexpr Dimensions SIMULATION_DIMENSIONS{SIMULATION_WIDTH, SIMULATION_HEIGHT};
 constexpr std::uint32_t RANDOM_SEED = 0x12345678u;
 constexpr int TICK_COUNT = 90;
 
@@ -19,7 +20,7 @@ using fire_tests::check;
 template <typename ExpectedException>
 void checkInvalidDimensions(const std::size_t width, const std::size_t height, const std::string_view message) {
     fire_tests::checkThrows<ExpectedException>(
-        [width, height] { [[maybe_unused]] const FireSimulation simulation{width, height}; }, message);
+        [width, height] { [[maybe_unused]] const FireSimulation simulation{{width, height}}; }, message);
 }
 
 [[nodiscard]] std::uint64_t heatHash(const HeatFrame& heat) noexcept {
@@ -84,11 +85,11 @@ void advance(FireSimulation& simulation, const int tickCount) noexcept {
 }
 
 void testConstruction() {
-    const FireSimulation simulation{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
+    const FireSimulation simulation{SIMULATION_DIMENSIONS, RANDOM_SEED};
     const HeatFrame heat = simulation.heat();
 
-    check(simulation.width() == SIMULATION_WIDTH, "simulation reports its width");
-    check(simulation.height() == SIMULATION_HEIGHT, "simulation reports its height");
+    check(simulation.dimensions() == SIMULATION_DIMENSIONS, "simulation retains its configured dimensions");
+    check(heat.dimensions() == SIMULATION_DIMENSIONS, "heat frame carries the simulation dimensions");
     check(heat.width() == SIMULATION_WIDTH, "heat frame reports the simulation width");
     check(heat.height() == SIMULATION_HEIGHT, "heat frame reports the simulation height");
     check(heat.cells().size() == SIMULATION_WIDTH * SIMULATION_HEIGHT, "heat frame matches its geometry");
@@ -108,17 +109,17 @@ void testConstruction() {
 void testUnalignedWidthStaysHidden() {
     constexpr std::size_t UNALIGNED_WIDTH = 65;
 
-    FireSimulation simulation{UNALIGNED_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
+    FireSimulation simulation{{UNALIGNED_WIDTH, SIMULATION_HEIGHT}, RANDOM_SEED};
     advance(simulation, TICK_COUNT);
     const HeatFrame heat = simulation.heat();
 
-    check(simulation.width() == UNALIGNED_WIDTH, "simulation reports the width it was asked for");
+    check(simulation.dimensions().width == UNALIGNED_WIDTH, "simulation reports the width it was asked for");
     check(heat.cells().size() == UNALIGNED_WIDTH * SIMULATION_HEIGHT, "heat frame matches an unaligned geometry");
     check(flameReach(heat) < 1.0, "an unaligned field still burns");
 }
 
 void testFlamesRiseAndBreakUp() {
-    FireSimulation simulation{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
+    FireSimulation simulation{SIMULATION_DIMENSIONS, RANDOM_SEED};
     advance(simulation, TICK_COUNT);
     const HeatFrame heat = simulation.heat();
 
@@ -138,13 +139,13 @@ void testFlamesRiseAndBreakUp() {
 }
 
 void testCoolingShortensFlames() {
-    FireSimulation gentle{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
+    FireSimulation gentle{SIMULATION_DIMENSIONS, RANDOM_SEED};
     FireParameters gentleParameters = gentle.parameters();
     gentleParameters.setCooling(FireParameters::MINIMUM_COOLING);
     gentle.setParameters(gentleParameters);
     advance(gentle, TICK_COUNT);
 
-    FireSimulation harsh{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
+    FireSimulation harsh{SIMULATION_DIMENSIONS, RANDOM_SEED};
     FireParameters harshParameters = harsh.parameters();
     harshParameters.setCooling(FireParameters::MAXIMUM_COOLING);
     harsh.setParameters(harshParameters);
@@ -154,7 +155,7 @@ void testCoolingShortensFlames() {
 }
 
 void testSourceHeatScalesTheBase() {
-    FireSimulation simulation{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
+    FireSimulation simulation{SIMULATION_DIMENSIONS, RANDOM_SEED};
     FireParameters parameters = simulation.parameters();
     parameters.setSourceHeat(FireParameters::MAXIMUM_SOURCE_HEAT);
     simulation.setParameters(parameters);
@@ -171,7 +172,7 @@ void testSourceHeatScalesTheBase() {
 }
 
 void testResetReplaysDeterministicSequence() {
-    FireSimulation simulation{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
+    FireSimulation simulation{SIMULATION_DIMENSIONS, RANDOM_SEED};
     const std::uint64_t initialHash = heatHash(simulation.heat());
 
     advance(simulation, TICK_COUNT);
@@ -186,9 +187,9 @@ void testResetReplaysDeterministicSequence() {
 }
 
 void testSeedSelectsTheCoolingMap() {
-    FireSimulation first{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
-    FireSimulation same{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED};
-    FireSimulation other{SIMULATION_WIDTH, SIMULATION_HEIGHT, RANDOM_SEED + 1u};
+    FireSimulation first{SIMULATION_DIMENSIONS, RANDOM_SEED};
+    FireSimulation same{SIMULATION_DIMENSIONS, RANDOM_SEED};
+    FireSimulation other{SIMULATION_DIMENSIONS, RANDOM_SEED + 1u};
 
     advance(first, TICK_COUNT);
     advance(same, TICK_COUNT);

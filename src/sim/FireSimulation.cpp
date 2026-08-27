@@ -41,6 +41,10 @@ constexpr double AMPLITUDE_SCALE = 2.72;
 [[nodiscard]] std::size_t roundUp(const std::size_t value, const std::size_t multiple) noexcept {
     return (value + multiple - 1) / multiple * multiple;
 }
+
+[[nodiscard]] bool productFits(const std::size_t left, const std::size_t right, const std::size_t maximum) noexcept {
+    return left == 0 || right <= maximum / left;
+}
 } // namespace
 
 FireSimulation::Cell* FireSimulation::mutableRow(const std::size_t y) noexcept {
@@ -51,27 +55,33 @@ const FireSimulation::Cell* FireSimulation::row(const std::size_t y) const noexc
     return heatField.data() + y * fieldStride + PAD_COLUMNS;
 }
 
-FireSimulation::FireSimulation(const std::size_t width, const std::size_t height, const std::uint32_t randomSeed)
-    : simulationWidth(width), simulationHeight(height), randomState(randomSeed == 0 ? FALLBACK_SEED : randomSeed) {
-    if (simulationWidth < 2 || simulationHeight < 2) {
+FireSimulation::FireSimulation(const Dimensions dimensions, const std::uint32_t randomSeed)
+    : simulationDimensions(dimensions), randomState(randomSeed == 0 ? FALLBACK_SEED : randomSeed) {
+    if (simulationDimensions.width < 2 || simulationDimensions.height < 2) {
         throw std::invalid_argument("Fire dimensions must both be at least 2");
     }
 
     constexpr std::size_t MAXIMUM_SIZE = std::numeric_limits<std::size_t>::max();
-    if (simulationWidth > static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()) / COOLING_ROWS ||
-        simulationHeight > MAXIMUM_SIZE / simulationWidth) {
+    if (!simulationDimensions.hasRepresentableArea() || simulationDimensions.area() > heatMap.max_size() ||
+        simulationDimensions.width > MAXIMUM_SIZE - (COARSE_SPACING_X - 1)) {
         throw std::length_error("Fire dimensions are too large");
     }
 
     // Complete lattice cells keep the wrapped cooling noise seamless.
-    fieldWidth = roundUp(simulationWidth, COARSE_SPACING_X);
-    fieldStride = fieldWidth + 2 * PAD_COLUMNS;
-    if (simulationHeight + SOURCE_ROWS > MAXIMUM_SIZE / fieldStride) {
+    fieldWidth = roundUp(simulationDimensions.width, COARSE_SPACING_X);
+    if (fieldWidth > MAXIMUM_SIZE - 2 * PAD_COLUMNS || simulationDimensions.height > MAXIMUM_SIZE - SOURCE_ROWS) {
         throw std::length_error("Fire dimensions are too large");
     }
 
-    heatField.resize(fieldStride * (simulationHeight + SOURCE_ROWS));
-    heatMap.resize(simulationWidth * simulationHeight);
+    fieldStride = fieldWidth + 2 * PAD_COLUMNS;
+    const std::size_t fieldHeight = simulationDimensions.height + SOURCE_ROWS;
+    if (!productFits(fieldStride, fieldHeight, heatField.max_size()) ||
+        !productFits(fieldWidth, COOLING_ROWS, coolingMap.max_size())) {
+        throw std::length_error("Fire dimensions are too large");
+    }
+
+    heatField.resize(fieldStride * fieldHeight);
+    heatMap.resize(simulationDimensions.area());
     buildCoolingMap();
     reset();
 }
@@ -80,7 +90,7 @@ void FireSimulation::tick() noexcept {
     wrapEdges();
 
     const std::uint32_t amplitude = coolingAmplitude;
-    for (std::size_t y = 0; y < simulationHeight; ++y) {
+    for (std::size_t y = 0; y < simulationDimensions.height; ++y) {
         const Cell* const below = row(y + 1);
         const Cell* const belowLeft = below - 1;
         const Cell* const belowRight = below + 1;
@@ -115,7 +125,7 @@ HeatFrame FireSimulation::heat() const noexcept {
     if (heatMapStale) {
         refreshHeatMap();
     }
-    return {heatMap, simulationWidth, simulationHeight};
+    return {heatMap, simulationDimensions};
 }
 
 void FireSimulation::setParameters(const FireParameters& parameters) noexcept {
@@ -137,14 +147,15 @@ void FireSimulation::applyParameters() noexcept {
     constexpr double COOLING_SPAN = FireParameters::MAXIMUM_COOLING - FireParameters::MINIMUM_COOLING;
     const double cooling = (simulationParameters.cooling() - FireParameters::MINIMUM_COOLING) / COOLING_SPAN;
     const double reach = MAXIMUM_REACH * std::pow(MINIMUM_REACH / MAXIMUM_REACH, cooling);
-    const double amplitude = AMPLITUDE_SCALE * MAXIMUM_HEAT / (reach * static_cast<double>(simulationHeight));
+    const double amplitude =
+        AMPLITUDE_SCALE * MAXIMUM_HEAT / (reach * static_cast<double>(simulationDimensions.height));
     coolingAmplitude =
         static_cast<std::uint32_t>(std::clamp<double>(std::lround(amplitude), 1.0, MAXIMUM_COOLING_AMPLITUDE));
 
     // A flat source leaves all flame structure to the cooling map.
     const auto sourceHeat = static_cast<Cell>(MAXIMUM_HEAT * simulationParameters.sourceHeat() / 255u);
-    std::fill_n(mutableRow(simulationHeight), fieldWidth, sourceHeat);
-    std::fill_n(mutableRow(simulationHeight + 1), fieldWidth, sourceHeat);
+    std::fill_n(mutableRow(simulationDimensions.height), fieldWidth, sourceHeat);
+    std::fill_n(mutableRow(simulationDimensions.height + 1), fieldWidth, sourceHeat);
 }
 
 void FireSimulation::buildCoolingMap() {
@@ -192,7 +203,7 @@ void FireSimulation::addNoiseOctave(const std::size_t spacingX, const std::size_
 void FireSimulation::wrapEdges() noexcept {
     static_assert(PAD_COLUMNS < COARSE_SPACING_X);
 
-    for (std::size_t y = 0; y < simulationHeight + SOURCE_ROWS; ++y) {
+    for (std::size_t y = 0; y < simulationDimensions.height + SOURCE_ROWS; ++y) {
         Cell* const cells = mutableRow(y);
         cells[-1] = cells[fieldWidth - 1];
         cells[fieldWidth] = cells[0];
@@ -200,10 +211,10 @@ void FireSimulation::wrapEdges() noexcept {
 }
 
 void FireSimulation::refreshHeatMap() const noexcept {
-    for (std::size_t y = 0; y < simulationHeight; ++y) {
+    for (std::size_t y = 0; y < simulationDimensions.height; ++y) {
         const Cell* const cells = row(y);
-        std::uint8_t* const destination = heatMap.data() + y * simulationWidth;
-        for (std::size_t x = 0; x < simulationWidth; ++x) {
+        std::uint8_t* const destination = heatMap.data() + y * simulationDimensions.width;
+        for (std::size_t x = 0; x < simulationDimensions.width; ++x) {
             destination[x] = static_cast<std::uint8_t>(cells[x] >> PALETTE_SHIFT);
         }
     }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sim/Dimensions.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -9,15 +11,20 @@ using Rgba32 = std::uint32_t;
 
 class PixelBuffer final {
 public:
-    void resize(std::size_t width, std::size_t height);
+    explicit PixelBuffer(Dimensions dimensions);
 
-    [[nodiscard]] std::size_t width() const noexcept { return bufferWidth; }
-    [[nodiscard]] std::size_t height() const noexcept { return bufferHeight; }
+    // QImage may alias this storage directly. Preventing resizing and object
+    // relocation keeps both the pixel address and its dimensions stable.
+    PixelBuffer(const PixelBuffer&) = delete;
+    PixelBuffer& operator=(const PixelBuffer&) = delete;
+    PixelBuffer(PixelBuffer&&) = delete;
+    PixelBuffer& operator=(PixelBuffer&&) = delete;
+
+    [[nodiscard]] Dimensions dimensions() const noexcept { return bufferDimensions; }
     [[nodiscard]] std::span<Rgba32> row(std::size_t y) noexcept;
     [[nodiscard]] const Rgba32* data() const noexcept { return pixels.data(); }
 
 private:
-    std::size_t bufferWidth{0};
-    std::size_t bufferHeight{0};
+    const Dimensions bufferDimensions;
     std::vector<Rgba32> pixels;
 };

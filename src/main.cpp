@@ -1,3 +1,5 @@
+#include "app/FireController.hpp"
+#include "app/FrameMetricsCollector.hpp"
 #include "app/MainWindow.hpp"
 
 #include <QApplication>
@@ -14,7 +16,11 @@ int main(int argc, char* argv[]) {
 
     // Hot path should never throw, construction errors caught here
     try {
-        MainWindow window;
+        // Both are borrowed by widgets inside the window, so they must outlive it.
+        // The controller additionally owns the zero-copy frame storage FireView aliases.
+        FrameMetricsCollector frameMetricsCollector;
+        FireController fireController;
+        MainWindow window{fireController, frameMetricsCollector};
         window.show();
         return application.exec();
     } catch (const std::exception& error) {

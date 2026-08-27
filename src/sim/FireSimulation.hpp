@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sim/Dimensions.hpp"
 #include "sim/FireParameters.hpp"
 #include "sim/HeatFrame.hpp"
 
@@ -12,13 +13,12 @@
 // prevents cold seams at the edges.
 class FireSimulation final {
 public:
-    explicit FireSimulation(std::size_t width, std::size_t height, std::uint32_t randomSeed = 0xC001CAFEu);
+    explicit FireSimulation(Dimensions dimensions, std::uint32_t randomSeed = 0xC001CAFEu);
 
     void tick() noexcept;
     void reset() noexcept;
 
-    [[nodiscard]] std::size_t width() const noexcept { return simulationWidth; }
-    [[nodiscard]] std::size_t height() const noexcept { return simulationHeight; }
+    [[nodiscard]] Dimensions dimensions() const noexcept { return simulationDimensions; }
 
     // Converts the fixed-point field to palette indices on demand.
     [[nodiscard]] HeatFrame heat() const noexcept;
@@ -41,8 +41,7 @@ private:
     void wrapEdges() noexcept;
     void refreshHeatMap() const noexcept;
 
-    std::size_t simulationWidth;
-    std::size_t simulationHeight;
+    const Dimensions simulationDimensions;
     // The hidden surplus columns make the cooling lattice periodic.
     std::size_t fieldWidth;
     std::size_t fieldStride;
