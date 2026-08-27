@@ -3,11 +3,11 @@
 #include "engine/FirePalette.hpp"
 
 FireEngine::FireEngine(const std::size_t simulationWidth, const std::size_t simulationHeight)
-    : simulation(simulationWidth, simulationHeight), renderer(FirePalette::classic()) {
+    : simulation(simulationWidth, simulationHeight), renderer(FirePalette::fromPreset(selectedPalettePreset)) {
     renderer.render(simulation.heat());
 }
 
-FrameReport FireEngine::advance(const std::chrono::steady_clock::duration elapsed) {
+FrameReport FireEngine::advance(const std::chrono::steady_clock::duration elapsed) noexcept {
     const TickPlan plan = clock.consume(elapsed);
     if (plan.ticks == 0) {
         return FrameReport{0, elapsed, plan.discardedTime, frameIndex, std::nullopt};
@@ -38,6 +38,18 @@ void FireEngine::reset() noexcept {
     frameIndex = 0;
 }
 
+void FireEngine::setPalettePreset(const FirePalettePresetId preset) noexcept {
+    const FirePalettePresetId resolvedPreset = firePalettePreset(preset).id;
+    if (resolvedPreset == selectedPalettePreset) {
+        return;
+    }
+
+    const FirePalette palette = FirePalette::fromPreset(resolvedPreset);
+    renderer.setPalette(palette);
+    selectedPalettePreset = resolvedPreset;
+    shade();
+}
+
 void FireEngine::setParameters(const FireParameters& parameters) noexcept { simulation.parameters() = parameters; }
 
 void FireEngine::simulate(const int ticks) noexcept {
@@ -46,4 +58,4 @@ void FireEngine::simulate(const int ticks) noexcept {
     }
 }
 
-void FireEngine::shade() { renderer.render(simulation.heat()); }
+void FireEngine::shade() noexcept { renderer.render(simulation.heat()); }

@@ -47,13 +47,15 @@ MainWindow::MainWindow(QWidget* const parent) : QMainWindow(parent) {
 
     windowLayout->addWidget(renderArea, 1);
 
-    auto* const controlPanel = new ControlPanel(fireController->parameters(), centralWidget);
+    auto* const controlPanel =
+        new ControlPanel(fireController->parameters(), fireController->palettePreset(), centralWidget);
     windowLayout->addWidget(controlPanel);
     setCentralWidget(centralWidget);
     // clang-format off
     connect(controlPanel, &ControlPanel::toggleRequested, fireController, &FireController::toggleRunning);
     connect(controlPanel, &ControlPanel::metricsEnabledChanged, frameMetricsCollector, &FrameMetricsCollector::setEnabled);
     connect(controlPanel, &ControlPanel::resetRequested, fireController, &FireController::reset);
+    connect(controlPanel, &ControlPanel::palettePresetChanged, fireController, &FireController::setPalettePreset);
     connect(controlPanel, &ControlPanel::parametersChanged, fireController, &FireController::setParameters);
 
     connect(fireController, &FireController::parametersChanged, controlPanel, &ControlPanel::setParameters);

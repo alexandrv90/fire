@@ -2,6 +2,7 @@
 
 #include "sim/FireParameters.hpp"
 
+#include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
@@ -39,7 +40,10 @@ QSlider* addSlider(QHBoxLayout& layout,
 }
 } // namespace
 
-ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const parent) : QWidget(parent) {
+ControlPanel::ControlPanel(const FireParameters& parameters,
+                           const FirePalettePresetId palettePreset,
+                           QWidget* const parent)
+    : QWidget(parent) {
     auto* const controlsLayout = new QHBoxLayout(this);
     controlsLayout->setContentsMargins(12, 8, 12, 8);
 
@@ -54,6 +58,18 @@ ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const pare
     controlsLayout->addWidget(metricsButton);
     controlsLayout->addWidget(pauseButton);
     controlsLayout->addWidget(resetButton);
+    controlsLayout->addSpacing(8);
+
+    paletteComboBox = new QComboBox(this);
+    paletteComboBox->setObjectName(QStringLiteral("paletteComboBox"));
+    paletteComboBox->setToolTip(QStringLiteral("Choose a fire palette"));
+    paletteComboBox->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    for (const FirePalettePreset& preset : firePalettePresets()) {
+        const QString name = QString::fromUtf8(preset.name.data(), static_cast<int>(preset.name.size()));
+        paletteComboBox->addItem(name, static_cast<int>(preset.id));
+    }
+    setPalettePreset(palettePreset);
+    controlsLayout->addWidget(paletteComboBox);
     controlsLayout->addSpacing(8);
 
     sourceHeatSlider = addSlider(*controlsLayout,
@@ -73,9 +89,24 @@ ControlPanel::ControlPanel(const FireParameters& parameters, QWidget* const pare
     connect(pauseButton, &QPushButton::clicked, this, &ControlPanel::toggleRequested);
     connect(metricsButton, &QPushButton::toggled, this, &ControlPanel::metricsEnabledChanged);
     connect(resetButton, &QPushButton::clicked, this, &ControlPanel::resetRequested);
+    connect(paletteComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](const int index) {
+        if (index >= 0) {
+            emit palettePresetChanged(static_cast<FirePalettePresetId>(paletteComboBox->itemData(index).toInt()));
+        }
+    });
     connect(
         sourceHeatSlider, &QSlider::valueChanged, this, [this] { emit parametersChanged(parametersFromControls()); });
     connect(coolingSlider, &QSlider::valueChanged, this, [this] { emit parametersChanged(parametersFromControls()); });
+}
+
+void ControlPanel::setPalettePreset(const FirePalettePresetId preset) {
+    const int index = paletteComboBox->findData(static_cast<int>(preset));
+    if (index < 0) {
+        return;
+    }
+
+    const QSignalBlocker signalBlocker{paletteComboBox};
+    paletteComboBox->setCurrentIndex(index);
 }
 
 void ControlPanel::setPaused(const bool paused) {

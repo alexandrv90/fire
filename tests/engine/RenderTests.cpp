@@ -25,6 +25,17 @@ void checkColor(const Rgba32 actual, const Rgba32 expected, const std::string_vi
     fire_tests::recordFailure();
 }
 
+void checkPaletteMatches(const FirePalette& actual, const FirePalette& expected, const std::string_view message) {
+    for (std::size_t index = 0; index < 256; ++index) {
+        if (actual[static_cast<std::uint8_t>(index)] != expected[static_cast<std::uint8_t>(index)]) {
+            check(false, message);
+            return;
+        }
+    }
+
+    check(true, message);
+}
+
 void testPixelBufferGeometry() {
     PixelBuffer buffer;
     check(buffer.width() == 0 && buffer.height() == 0, "a new pixel buffer has empty geometry");
@@ -89,16 +100,17 @@ void testPaletteValidation() {
         PaletteStop{255, 255, 255, 255},
     };
 
-    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(noStops)); },
-                                                   "palette rejects an empty stop list");
-    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(missingFirstStop)); },
-                                                   "palette requires its first stop at index zero");
-    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(missingLastStop)); },
-                                                   "palette requires its final stop at index 255");
-    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(duplicateStop)); },
-                                                   "palette rejects duplicate stop indices");
-    fire_tests::checkThrows<std::invalid_argument>([&] { static_cast<void>(FirePalette::fromStops(descendingStops)); },
-                                                   "palette rejects descending stop indices");
+    static_assert(noexcept(FirePalette::fromStops(noStops)));
+    static_assert(noexcept(FirePalette::fromPreset(FirePalettePresetId::Classic)));
+
+    const FirePalette classic = FirePalette::classic();
+    checkPaletteMatches(FirePalette::fromStops(noStops), classic, "an empty stop list falls back to classic");
+    checkPaletteMatches(
+        FirePalette::fromStops(missingFirstStop), classic, "a missing first stop falls back to classic");
+    checkPaletteMatches(FirePalette::fromStops(missingLastStop), classic, "a missing final stop falls back to classic");
+    checkPaletteMatches(FirePalette::fromStops(duplicateStop), classic, "duplicate stop indices fall back to classic");
+    checkPaletteMatches(
+        FirePalette::fromStops(descendingStops), classic, "descending stop indices fall back to classic");
 }
 
 void testRenderer() {

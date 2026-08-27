@@ -15,10 +15,13 @@ public:
     explicit FireEngine(std::size_t simulationWidth = SIMULATION_WIDTH,
                         std::size_t simulationHeight = SIMULATION_HEIGHT);
 
-    [[nodiscard]] FrameReport advance(std::chrono::steady_clock::duration elapsed);
+    [[nodiscard]] FrameReport advance(std::chrono::steady_clock::duration elapsed) noexcept;
     void reset() noexcept;
 
     [[nodiscard]] const PixelBuffer& frame() const noexcept { return renderer.target(); }
+
+    [[nodiscard]] FirePalettePresetId palettePreset() const noexcept { return selectedPalettePreset; }
+    void setPalettePreset(FirePalettePresetId preset) noexcept;
 
     [[nodiscard]] const FireParameters& parameters() const noexcept { return simulation.parameters(); }
     void setParameters(const FireParameters& parameters) noexcept;
@@ -32,9 +35,10 @@ private:
     static constexpr std::chrono::duration<double> TICK_DURATION{1.0 / 60.0}; // 60Hz
 
     void simulate(int ticks) noexcept;
-    void shade();
+    void shade() noexcept;
 
     FireSimulation simulation;
+    FirePalettePresetId selectedPalettePreset{FirePalettePresetId::Classic};
     FireRenderer renderer;
     FrameClock clock{TICK_DURATION, MAXIMUM_TICKS_PER_WAKE};
     std::uint64_t frameIndex{0};

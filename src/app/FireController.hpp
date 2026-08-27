@@ -17,6 +17,7 @@ public:
     [[nodiscard]] bool isRunRequested() const noexcept { return runRequested; }
     [[nodiscard]] bool isSuspended() const noexcept { return suspensionActive; }
     [[nodiscard]] const PixelBuffer& frame() const noexcept { return engine.frame(); }
+    [[nodiscard]] FirePalettePresetId palettePreset() const noexcept { return engine.palettePreset(); }
     [[nodiscard]] const FireParameters& parameters() const noexcept { return engine.parameters(); }
 
 public slots:
@@ -24,6 +25,7 @@ public slots:
     void pause();
     void toggleRunning();
     void reset();
+    void setPalettePreset(FirePalettePresetId preset) noexcept;
     void setParameters(const FireParameters& parameters);
     void setMetricsEnabled(bool enabled) noexcept;
     void setSuspended(bool suspended);
@@ -36,7 +38,7 @@ signals:
     void runningChanged(bool running);
 
 private slots:
-    void onWake();
+    void onWake() noexcept;
 
 private:
     using Clock = std::chrono::steady_clock;

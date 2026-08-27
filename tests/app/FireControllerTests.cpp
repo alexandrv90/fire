@@ -61,6 +61,22 @@ void testRunRequestWhileSuspendedWaitsForRestore() {
     controller.setSuspended(false);
     check(controller.isRunning(), "restore starts advancement requested during suspension");
 }
+
+void testPaletteSelectionPublishesAnImmediateFrame() {
+    FireController controller;
+    int frameReadyCount = 0;
+    QObject::connect(&controller, &FireController::frameReady, &controller, [&frameReadyCount] { ++frameReadyCount; });
+
+    controller.setPalettePreset(FirePalettePresetId::Ghostlight);
+    check(controller.palettePreset() == FirePalettePresetId::Ghostlight,
+          "the controller accepts a palette selection while paused");
+
+    check(frameReadyCount == 1, "a palette selection publishes an immediately re-shaded frame");
+
+    controller.reset();
+    check(controller.palettePreset() == FirePalettePresetId::Ghostlight,
+          "controller reset preserves the selected palette");
+}
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -69,6 +85,7 @@ int main(int argc, char* argv[]) {
     testSuspensionPreservesRequestedRunState();
     testPausedControllerStaysPausedAcrossSuspension();
     testRunRequestWhileSuspendedWaitsForRestore();
+    testPaletteSelectionPublishesAnImmediateFrame();
 
     return fire_tests::reportResults("fire controller");
 }

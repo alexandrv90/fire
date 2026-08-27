@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <span>
+#include <string_view>
 
 struct PaletteStop {
     std::uint8_t index;
@@ -13,10 +14,26 @@ struct PaletteStop {
     std::uint8_t blue;
 };
 
+enum class FirePalettePresetId : std::uint8_t {
+    Classic,
+    Ghostlight,
+    ArcaneBloom,
+};
+
+struct FirePalettePreset {
+    FirePalettePresetId id;
+    std::string_view name;
+    std::span<const PaletteStop> stops;
+};
+
+[[nodiscard]] std::span<const FirePalettePreset> firePalettePresets() noexcept;
+[[nodiscard]] const FirePalettePreset& firePalettePreset(FirePalettePresetId id) noexcept;
+
 class FirePalette final {
 public:
-    [[nodiscard]] static FirePalette classic();
-    [[nodiscard]] static FirePalette fromStops(std::span<const PaletteStop> stops);
+    [[nodiscard]] static FirePalette classic() noexcept;
+    [[nodiscard]] static FirePalette fromPreset(FirePalettePresetId id) noexcept;
+    [[nodiscard]] static FirePalette fromStops(std::span<const PaletteStop> stops) noexcept;
 
     [[nodiscard]] Rgba32 operator[](std::uint8_t heat) const noexcept;
 

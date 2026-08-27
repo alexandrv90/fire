@@ -44,6 +44,11 @@ void FireController::reset() {
     emit frameReady();
 }
 
+void FireController::setPalettePreset(const FirePalettePresetId preset) noexcept {
+    engine.setPalettePreset(preset);
+    emit frameReady();
+}
+
 void FireController::setParameters(const FireParameters& parameters) {
     engine.setParameters(parameters);
     emit parametersChanged(engine.parameters());
@@ -78,7 +83,7 @@ void FireController::updateWakeTimer() {
     wakeTimer.start();
 }
 
-void FireController::onWake() {
+void FireController::onWake() noexcept {
     const auto now = Clock::now();
     const auto elapsed = now - lastWake;
     lastWake = now;

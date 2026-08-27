@@ -125,6 +125,31 @@ void testEngineResetRestoresInitialState() {
     check(frameReport.ticksExecuted == 1 && frameReport.frameIndex == 1, "engine produces frames normally after reset");
     check(frameReport.stageTimings.has_value(), "engine reset preserves the stage timing policy");
 }
+
+void testEngineSwitchesPaletteWithoutResettingSimulation() {
+    FireEngine engine{8, 6};
+    static_cast<void>(engine.advance(17ms));
+    const Rgba32* const frameStorage = engine.frame().data();
+    const std::vector<Rgba32> classicPixels = copyPixels(engine.frame());
+
+    engine.setPalettePreset(FirePalettePresetId::Ghostlight);
+    check(engine.palettePreset() == FirePalettePresetId::Ghostlight, "the engine reports the selected palette preset");
+    check(engine.frame().data() == frameStorage, "switching palettes reuses the rendered frame storage");
+    check(copyPixels(engine.frame()) != classicPixels,
+          "switching palettes immediately re-shades the current simulation frame");
+
+    engine.setPalettePreset(FirePalettePresetId::Classic);
+    check(copyPixels(engine.frame()) == classicPixels,
+          "switching back to classic re-shades the unchanged simulation heat");
+
+    engine.setPalettePreset(static_cast<FirePalettePresetId>(255));
+    check(engine.palettePreset() == FirePalettePresetId::Classic,
+          "an unknown palette preset leaves the engine on classic");
+
+    engine.setPalettePreset(FirePalettePresetId::ArcaneBloom);
+    engine.reset();
+    check(engine.palettePreset() == FirePalettePresetId::ArcaneBloom, "reset preserves the selected palette preset");
+}
 } // namespace
 
 int main() {
@@ -135,6 +160,7 @@ int main() {
     testEngineProducesOnlyTickedFrames();
     testEngineReportsCatchUpAndParameters();
     testEngineResetRestoresInitialState();
+    testEngineSwitchesPaletteWithoutResettingSimulation();
 
     return fire_tests::reportResults("engine");
 }

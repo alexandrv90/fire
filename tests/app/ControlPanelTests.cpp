@@ -4,6 +4,8 @@
 #include "tests_common.h"
 
 #include <QApplication>
+#include <QComboBox>
+#include <QLabel>
 #include <QObject>
 #include <QPushButton>
 #include <QSlider>
@@ -103,6 +105,40 @@ void testMetricsToggleBinding() {
     metricsButton->click();
     check(changeCount == 2 && reportedEnabledState, "clicking disabled metrics requests collection to start");
 }
+
+void testPalettePresetBinding() {
+    ControlPanel panel{FireParameters{}, FirePalettePresetId::ArcaneBloom};
+    auto* const paletteComboBox = panel.findChild<QComboBox*>(QStringLiteral("paletteComboBox"));
+    check(paletteComboBox != nullptr, "the panel exposes a palette dropdown");
+    if (paletteComboBox == nullptr) {
+        return;
+    }
+
+    check(paletteComboBox->count() == 3, "the palette dropdown contains every built-in preset");
+    check(paletteComboBox->currentText() == QStringLiteral("Arcane Bloom"),
+          "the palette dropdown reflects the initial preset");
+
+    for (const QLabel* const label : panel.findChildren<QLabel*>()) {
+        check(label->text() != QStringLiteral("Palette"), "the palette dropdown has no separate text label");
+    }
+
+    int changeCount = 0;
+    FirePalettePresetId reportedPreset = FirePalettePresetId::Classic;
+    QObject::connect(
+        &panel, &ControlPanel::palettePresetChanged, [&changeCount, &reportedPreset](const FirePalettePresetId preset) {
+            ++changeCount;
+            reportedPreset = preset;
+        });
+
+    paletteComboBox->setCurrentIndex(paletteComboBox->findData(static_cast<int>(FirePalettePresetId::Ghostlight)));
+    check(changeCount == 1 && reportedPreset == FirePalettePresetId::Ghostlight,
+          "selecting a dropdown item emits its stable palette ID");
+
+    panel.setPalettePreset(FirePalettePresetId::Classic);
+    check(paletteComboBox->currentText() == QStringLiteral("Classic"),
+          "applying an accepted preset updates the dropdown");
+    check(changeCount == 1, "synchronizing the accepted preset does not feed back to the controller");
+}
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -111,6 +147,7 @@ int main(int argc, char* argv[]) {
 
     testParameterValueBinding();
     testMetricsToggleBinding();
+    testPalettePresetBinding();
 
     return fire_tests::reportResults("control panel");
 }
