@@ -26,7 +26,7 @@ QSlider* findSlider(ControlPanel& panel, const int minimum, const int maximum) {
 }
 
 QLabel* valueLabelFor(const QSlider& slider) {
-    const int sliderIndex = slider.parentWidget()->layout()->indexOf(&slider);
+    const int sliderIndex = slider.parentWidget()->layout()->indexOf(const_cast<QSlider*>(&slider));
     return qobject_cast<QLabel*>(slider.parentWidget()->layout()->itemAt(sliderIndex + 1)->widget());
 }
 
